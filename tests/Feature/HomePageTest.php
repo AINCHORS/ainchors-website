@@ -17,6 +17,7 @@ class HomePageTest extends TestCase
             ->assertSee('Mentorship and Coaching')
             ->assertSee('What our Customers are Saying')
             ->assertSee('AINCHORS Sdn Bhd')
+            ->assertSee('legacy-responsive.css')
             ->assertDontSee('React');
     }
 

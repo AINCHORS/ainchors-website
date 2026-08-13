@@ -1,0 +1,164 @@
+/*
+ * Responsive safeguards for the original Funnel Freedom export.
+ * This file intentionally does not change the site's colours, typography,
+ * wording or component design. It only prevents fixed-width/negative-margin
+ * rules from overlapping at tablet and mobile viewport widths.
+ */
+
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+html body .hl_wrapper {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+}
+
+.hl_page-preview--content img,
+.hl_page-preview--content video,
+.hl_page-preview--content iframe {
+    max-width: 100%;
+}
+
+.hl_page-preview--content .text-output,
+.hl_page-preview--content .text-output * {
+    overflow-wrap: break-word;
+}
+
+.hl_page-preview--content .c-button button,
+.hl_page-preview--content .c-button a,
+.hl_page-preview--content .main-heading-button {
+    min-width: 0;
+    word-break: normal;
+    overflow-wrap: normal;
+    white-space: normal;
+}
+
+/* Trainer profile: remove the exported negative offsets that pull the
+   engagement list into its heading when the available width decreases. */
+@media screen and (max-width: 1199px) {
+    .hl_page-preview--content #row-CkF-2mIJKo {
+        margin-top: 20px !important;
+    }
+
+    .hl_page-preview--content #row-CkF-2mIJKo > .inner {
+        align-items: start !important;
+        height: auto !important;
+    }
+
+    .hl_page-preview--content #row-CkF-2mIJKo .c-column,
+    .hl_page-preview--content #row-CkF-2mIJKo .c-wrapper,
+    .hl_page-preview--content #bulletList-bwdSaBlO_Y {
+        margin-top: 0 !important;
+    }
+
+    .hl_page-preview--content #sub-heading-yTzPx0vnCi {
+        margin: 0 15px 12px !important;
+        height: auto !important;
+    }
+
+    .hl_page-preview--content #bulletList-bwdSaBlO_Y {
+        margin-bottom: 20px !important;
+    }
+}
+
+/* The same footer row is exported on the Funnel Freedom pages. At tablet
+   widths it becomes a two-column grid instead of squeezing four fixed columns. */
+@media screen and (min-width: 768px) and (max-width: 1099px) {
+    .hl_page-preview--content #row-98qcC-59L4 {
+        padding: 34px 24px 20px !important;
+        height: auto !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 > .inner {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start !important;
+        gap: 38px 44px;
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 > .inner > .c-column {
+        width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 10px 20px !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 .c-column > .inner {
+        height: auto !important;
+        min-height: 0 !important;
+        justify-content: flex-start !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 [id^='heading-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='paragraph-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='bulletList-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='social-icons-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='form-'] {
+        width: auto !important;
+        height: auto !important;
+        margin: 0 0 16px !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 .social-icons-vErNgeMs78,
+    .hl_page-preview--content #row-98qcC-59L4 .csocial-icons-vErNgeMs78 {
+        margin: 18px 0 0 !important;
+        padding: 10px 0 !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 .form-builder--item,
+    .hl_page-preview--content #row-98qcC-59L4 .form-builder--item input,
+    .hl_page-preview--content #row-98qcC-59L4 .form-builder--item select,
+    .hl_page-preview--content #row-98qcC-59L4 .form-builder--item textarea,
+    .hl_page-preview--content #row-98qcC-59L4 form button {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .hl_page-preview--content #row-98qcC-59L4 {
+        padding: 34px 20px !important;
+        height: auto !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 > .inner {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 30px;
+        height: auto !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 > .inner > .c-column,
+    .hl_page-preview--content #row-98qcC-59L4 [id^='heading-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='paragraph-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='bulletList-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='social-icons-'],
+    .hl_page-preview--content #row-98qcC-59L4 [id^='form-'] {
+        width: 100% !important;
+        height: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        text-align: center !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 .c-column > .inner {
+        height: auto !important;
+        min-height: 0 !important;
+        justify-content: flex-start !important;
+    }
+
+    .hl_page-preview--content #row-98qcC-59L4 .social-icons-vErNgeMs78,
+    .hl_page-preview--content #row-98qcC-59L4 .csocial-icons-vErNgeMs78 {
+        margin: 18px 0 0 !important;
+        padding: 10px 0 !important;
+    }
+}

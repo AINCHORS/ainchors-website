@@ -7,6 +7,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class LegacyPageController extends Controller
 {
+    public function home(): Response
+    {
+        return $this('home');
+    }
+
     public function __invoke(string $path): Response
     {
         abort_unless((bool) preg_match('/\A[A-Za-z0-9\/-]+\z/', $path) && ! str_contains($path, '..'), 404);
@@ -25,6 +30,9 @@ class LegacyPageController extends Controller
             'https://www.ainchors.com',
             'https://ainchors.com',
         ], $base, $html);
+
+        $responsiveStyles = '<link rel="stylesheet" href="'.asset('legacy-responsive.css').'">';
+        $html = str_replace('</head>', $responsiveStyles.'</head>', $html);
 
         $html = preg_replace_callback(
             '~https?://(?:images\.leadconnectorhq\.com/image/[^\"\']*?_https://)?(?:assets\.cdn\.filesafe\.space|storage\.googleapis\.com/msgsndr)/[^\"\']*/media/([^?\"\']+)~i',
