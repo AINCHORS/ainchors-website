@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="AINCHORS Training & Consulting">
+    <title>@yield('title', 'AINCHORS Training & Consulting')</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="min-h-screen bg-white text-slate-900 antialiased">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+    <x-site-header :navigation="$navigation" />
+    <main id="main-content">
+        @yield('content')
+    </main>
+    <x-site-footer :footer="$footer" />
+    <a class="whatsapp-float" href="https://wa.me/+61418802086" target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp">
+        <img src="{{ asset('assets/whatsapp.svg') }}" alt="">
+    </a>
+</body>
+</html>

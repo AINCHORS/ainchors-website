@@ -1,0 +1,10 @@
+{
+    "php.validate.executablePath": "C:\\Users\\Acer\\.config\\herd\\bin\\php84\\php.exe",
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\Acer\\.config\\herd\\bin;${env:PATH}"
+    },
+    "files.associations": {
+        "*.blade.php": "blade"
+    },
+    "editor.formatOnSave": true
+}

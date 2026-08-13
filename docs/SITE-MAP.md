@@ -1,49 +1,18 @@
-# Site Map
+# Site map
 
-Only `/` is implemented in Phase 1. Other routes document the future architecture and must not be treated as finished pages.
+- Home: `/home`
+- About us: `/about-us-814253`
+- Training
+  - Trainer Profiles: `/trainers-profile`
+  - Testimonials: `/testimonials`
+  - Courses: `/courses`
+  - Success Story: `/success-story-of-angie`
+- Consulting
+  - Main: `/consulting-main`
+  - Public/Government Sector: `/consulting-gov`
+  - Private Sector: `/consulting-private`
+- FAQ’s: `/faqs`
+- Join Us: `/hiring-page`
+- Contact us: `/contact-us`
 
-```text
-HOME
-└── /
-
-COMPANY
-├── /about
-└── /success-story
-
-TRAINING
-├── /training
-└── /trainers
-
-COURSES
-├── /courses
-└── /courses/:slug
-
-CONSULTING
-├── /consulting
-├── /consulting/government
-└── /consulting/private-sector
-
-SOCIAL PROOF
-├── /testimonials
-└── /events
-
-SUPPORT
-├── /faq
-└── /contact
-
-CAREERS
-└── /careers
-
-LEGAL
-├── /terms
-└── /privacy
-
-COMMERCE
-├── /checkout
-├── /payment
-└── /order-confirmation
-```
-
-## Legacy mapping
-
-The initial mapping is stored in `src/core/constants/legacy-routes.ts`. It is migration documentation only; redirects are intentionally not enabled in Phase 1.
+Additional course, event, checkout and policy routes are retained by the legacy bridge.

@@ -1,24 +1,22 @@
 # AINCHORS Website V2
 
-A clean, modular and responsive rebuild of the AINCHORS corporate website.
+AINCHORS V2 is a server-rendered Laravel 13 website built with Blade, Tailwind CSS, Alpine.js and Vite.
 
-The legacy mirror at `C:\xampp\htdocs\ainchors-website` is a read-only content and asset reference. V2 does not reuse its generated page implementation.
+## Requirements
 
-## Phase 1 scope
+- PHP 8.3+
+- Composer
+- Node.js and npm
 
-- Modular project and routing boundaries
-- Central design tokens, typography and responsive layout rules
-- Shared Header, mobile navigation, Footer, Button, Container, Section, Card and WhatsApp CTA
-- Responsive homepage architecture proof
-- Central SEO preparation and legacy URL mapping
-- Architecture and development documentation
+## Run locally
 
-Only the homepage is implemented in this phase. See [Site Map](docs/SITE-MAP.md), [Modules](docs/MODULES.md), [Design System](docs/DESIGN-SYSTEM.md), and [Development](docs/DEVELOPMENT.md).
-
-## Commands
-
-```bash
-npm run dev
-npm run lint
-npm test
+```powershell
+composer install
+npm install
+php artisan key:generate
+composer run dev
 ```
+
+Open `http://127.0.0.1:8000/home`.
+
+See `docs/CONTENT-SOURCE.md` before changing website copy or assets.
