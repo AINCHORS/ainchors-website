@@ -1,0 +1,15 @@
+export const legacyRouteMap: Record<string, string> = {
+  "/home": "/",
+  "/about-us-814253": "/about",
+  "/trainers-profile": "/trainers",
+  "/courses": "/courses",
+  "/consulting-main": "/consulting",
+  "/consulting-gov": "/consulting/government",
+  "/consulting-private": "/consulting/private-sector",
+  "/hiring-page": "/careers",
+  "/faqs": "/faq",
+  "/contact-us": "/contact",
+  "/success-story-of-angie": "/success-story",
+  "/terms--conditions": "/terms",
+  "/privacy--policy": "/privacy",
+};

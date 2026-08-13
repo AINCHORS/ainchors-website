@@ -1,0 +1,55 @@
+@media (max-width: 1023px) {
+  :root { --header-height: 5rem; }
+  .menu-button { display: block; }
+  .site-nav { align-items: stretch; background: var(--color-white); border-top: 1px solid var(--color-border); box-shadow: var(--shadow-lg); display: none; left: 0; padding: var(--space-6) max(1rem, calc((100vw - var(--container)) / 2)); position: absolute; right: 0; top: 100%; }
+  .site-nav--open { display: grid; }
+  .site-nav ul { align-items: stretch; display: grid; gap: 0; }
+  .site-nav li { border-bottom: 1px solid var(--color-border); }
+  .site-nav ul a { display: block; padding: 1rem .25rem; }
+  .site-nav ul a::after { display: none; }
+  .site-nav__contact { margin-top: var(--space-4); }
+  .hero__grid { grid-template-columns: minmax(0, 1fr) minmax(18rem, .75fr); }
+  .hero__media figcaption { left: -1rem; }
+  .service-grid, .testimonial-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-card:last-child, .testimonial-card:last-child { grid-column: 1 / -1; max-width: calc(50% - .75rem); width: 100%; }
+  .trust-section__header { grid-template-columns: 1fr; }
+  .site-footer__grid { grid-template-columns: 1.5fr repeat(2, 1fr); }
+  .site-footer__grid > div:last-child { grid-column: 2; }
+}
+
+@media (max-width: 767px) {
+  .container { width: min(calc(100% - 2rem), var(--container)); }
+  .site-header__brand { width: 9.5rem; }
+  .hero { padding-top: var(--space-12); }
+  .hero__grid { gap: var(--space-12); grid-template-columns: 1fr; }
+  .hero__media { margin-inline: 0; }
+  .hero__media > img { aspect-ratio: 1.35; }
+  .hero__media figcaption { bottom: -1.25rem; left: var(--space-4); right: var(--space-4); }
+  .client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .client-logo { height: 6.25rem; }
+  .service-grid, .testimonial-grid, .trust-grid { grid-template-columns: 1fr; }
+  .service-card:last-child, .testimonial-card:last-child { grid-column: auto; max-width: none; }
+  .trust-grid article { padding-inline: 0; }
+  .trust-grid article + article { border-left: 0; border-top: 1px solid rgb(255 255 255 / 15%); }
+  .final-cta .container { align-items: flex-start; flex-direction: column; }
+  .site-footer__grid { grid-template-columns: 1fr 1fr; }
+  .site-footer__brand { grid-column: 1 / -1; }
+  .site-footer__grid > div:last-child { grid-column: auto; }
+  .site-footer__bottom { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 479px) {
+  .hero__actions { align-items: stretch; flex-direction: column; }
+  .hero__actions .button { width: 100%; }
+  .client-logo { padding: var(--space-3); }
+  .client-logo img { max-height: 3.75rem; max-width: 7.5rem; }
+  .site-footer__grid { grid-template-columns: 1fr; }
+  .site-footer__brand { grid-column: auto; }
+  .whatsapp-button { bottom: var(--space-4); right: var(--space-4); }
+  .whatsapp-button strong { display: none; }
+  .whatsapp-button { padding-right: .6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
