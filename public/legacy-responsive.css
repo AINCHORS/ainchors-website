@@ -37,6 +37,100 @@ html body .hl_wrapper {
     white-space: normal;
 }
 
+/* Home training offer images: the export gives the three images the same width
+   but leaves height to each source image ratio. Keep the original images and
+   make their visible frame consistent. */
+.hl_page-preview--content #row-J4PqK7r5NL #image-WcQYWf2cMp,
+.hl_page-preview--content #row-J4PqK7r5NL #image-ybCBD4k0Ch,
+.hl_page-preview--content #row-J4PqK7r5NL #image-MCt85E4g_8 {
+    height: 178px !important;
+    overflow: hidden !important;
+}
+
+.hl_page-preview--content #row-J4PqK7r5NL #image-WcQYWf2cMp .image-container,
+.hl_page-preview--content #row-J4PqK7r5NL #image-ybCBD4k0Ch .image-container,
+.hl_page-preview--content #row-J4PqK7r5NL #image-MCt85E4g_8 .image-container {
+    height: 100% !important;
+}
+
+.hl_page-preview--content #row-J4PqK7r5NL #image-WcQYWf2cMp .image-container > div,
+.hl_page-preview--content #row-J4PqK7r5NL #image-WcQYWf2cMp .image-container > div > div,
+.hl_page-preview--content #row-J4PqK7r5NL #image-WcQYWf2cMp picture,
+.hl_page-preview--content #row-J4PqK7r5NL #image-ybCBD4k0Ch .image-container > div,
+.hl_page-preview--content #row-J4PqK7r5NL #image-ybCBD4k0Ch .image-container > div > div,
+.hl_page-preview--content #row-J4PqK7r5NL #image-ybCBD4k0Ch picture,
+.hl_page-preview--content #row-J4PqK7r5NL #image-MCt85E4g_8 .image-container > div,
+.hl_page-preview--content #row-J4PqK7r5NL #image-MCt85E4g_8 .image-container > div > div,
+.hl_page-preview--content #row-J4PqK7r5NL #image-MCt85E4g_8 picture {
+    height: 100% !important;
+}
+
+.hl_page-preview--content #row-J4PqK7r5NL #image-WcQYWf2cMp img,
+.hl_page-preview--content #row-J4PqK7r5NL #image-ybCBD4k0Ch img,
+.hl_page-preview--content #row-J4PqK7r5NL #image-MCt85E4g_8 img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+}
+
+/* The exported cards vertically centre all their content. Because each card
+   has a different amount of copy, that moves otherwise equal image frames to
+   different top positions. Anchor this row's content to the card top instead. */
+.hl_page-preview--content #row-J4PqK7r5NL .c-column > .vertical.inner {
+    justify-content: flex-start !important;
+}
+
+/* Keep the three offer headings on one shared horizontal line. The third
+   heading naturally wraps, so reserve the same two-line title area in all
+   three cards before their descriptions begin. */
+.hl_page-preview--content #row-J4PqK7r5NL #heading-5PG3V3JbmD,
+.hl_page-preview--content #row-J4PqK7r5NL #heading-aq8h2Cy5ar,
+.hl_page-preview--content #row-J4PqK7r5NL #heading-AAAxAArSq0 {
+    margin: 20px 0 !important;
+    min-height: 52px !important;
+}
+
+/* Finish the shared card grid: every card has the same content area and the
+   CTA is pinned to its bottom edge. This keeps the buttons level even when
+   the source descriptions have different lengths. */
+.hl_page-preview--content #row-J4PqK7r5NL #col-IUqnG3TZSR,
+.hl_page-preview--content #row-J4PqK7r5NL #col-RV1jTIH8WN,
+.hl_page-preview--content #row-J4PqK7r5NL #col-MkPjhHkxuL {
+    padding-bottom: 40px !important;
+}
+
+.hl_page-preview--content #row-J4PqK7r5NL #button-cpLnYP73cB,
+.hl_page-preview--content #row-J4PqK7r5NL #button-obIYskxyjU,
+.hl_page-preview--content #row-J4PqK7r5NL #button-34X-EA-iIc {
+    height: 55px !important;
+    margin: auto 0 0 !important;
+}
+
+.hl_page-preview--content #row-J4PqK7r5NL #button-cpLnYP73cB > a,
+.hl_page-preview--content #row-J4PqK7r5NL #button-obIYskxyjU > a,
+.hl_page-preview--content #row-J4PqK7r5NL #button-34X-EA-iIc > a {
+    align-items: center !important;
+    display: inline-flex !important;
+    height: 55px !important;
+    justify-content: center !important;
+}
+
+/* Trust indicators: the legacy export assigns each sentence a different
+   column width. Use three equal tracks on desktop so their text blocks and
+   line wrapping are visually balanced. Mobile keeps its original stacked UI. */
+@media screen and (min-width: 768px) {
+    .hl_page-preview--content #row-dLpx-OGf7f > .inner {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    .hl_page-preview--content #row-dLpx-OGf7f > .inner > .c-column,
+    .hl_page-preview--content #row-dLpx-OGf7f .c-heading {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+}
+
 /* Trainer profile: remove the exported negative offsets that pull the
    engagement list into its heading when the available width decreases. */
 @media screen and (max-width: 1199px) {

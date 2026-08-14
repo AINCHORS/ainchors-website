@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Modules;
 
-use App\Services\SiteContent;
+use App\Http\Controllers\Controller;
+use App\Services\Content\SiteContent;
 use Illuminate\Contracts\View\View;
 
 class HomeController extends Controller

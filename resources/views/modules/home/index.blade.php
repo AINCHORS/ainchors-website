@@ -23,7 +23,7 @@
 
 <section class="section services-section">
     <div class="site-shell"><div class="section-heading"><span>What We Offer</span><h2>What We Offer</h2><p>Our courses are crafted by industry veterans with decades of real-world expertise.</p></div><div class="services-grid">
-        @foreach ($services as $service)<x-service-card :service="$service" />@endforeach
+        @foreach ($services as $service)<x-cards.service-card :service="$service" />@endforeach
     </div></div>
 </section>
 
@@ -36,7 +36,7 @@
 
 <section class="section testimonials-section">
     <div class="site-shell"><div class="section-heading"><span>Testimonials</span><h2>What our Customers are Saying</h2></div><div class="testimonial-grid">
-        @foreach ($testimonials as $testimonial)<x-testimonial-card :testimonial="$testimonial" />@endforeach
+        @foreach ($testimonials as $testimonial)<x-cards.testimonial-card :testimonial="$testimonial" />@endforeach
     </div><div class="center-link"><a href="{{ url('/testimonials') }}">View All <span aria-hidden="true">→</span></a></div></div>
 </section>
 
