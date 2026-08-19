@@ -14,6 +14,7 @@
     <main id="main-content">
         @yield('content')
     </main>
+    <x-welcome-modal />
     <x-site-footer />
 </body>
 </html>

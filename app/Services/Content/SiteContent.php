@@ -26,7 +26,7 @@ class SiteContent
                     'body' => 'Our self-learning courses offer flexible and independent paths to skill-building. Each course provides concise, practical lessons with hands-on exercises to boost productivity and personal growth at your own pace.​',
                     'image' => 'assets/service-self-learning.webp',
                     'label' => 'Apply Now!',
-                    'url' => url('/courses'),
+                    'url' => route('courses.index'),
                 ],
                 [
                     'heading' => 'Mentorship and Coaching',

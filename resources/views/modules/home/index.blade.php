@@ -48,7 +48,7 @@
 
 <section class="trust-section">
     <div class="site-shell trust-grid">
-        <div class="trust-copy"><span>Trusted By Government Regulators</span><h2>Working with the top international banks</h2><p>Here is the average rating training performance based on the 3 weeks programming training project for one of our top banking clients.</p><a href="https://wa.me/+61418802086">Contact Us! <span aria-hidden="true">→</span></a></div>
+        <div class="trust-copy"><span>Trusted By Government Regulators</span><h2>Working with the top international banks</h2><p>Here is the average rating training performance based on the 3 weeks programming training project for one of our top banking clients.</p><a href="https://wa.me/+61418802086" target="_blank" rel="noopener noreferrer">Contact Us! <span aria-hidden="true">→</span></a></div>
         <div class="rating-card"><h3>Well-received courses with positive feedbackS</h3><img src="{{ asset('assets/ratings.svg') }}" alt="Training performance ratings"></div>
     </div>
 </section>
@@ -56,7 +56,7 @@
 <section class="section testimonials-section">
     <div class="site-shell"><div class="section-heading"><span>Testimonials</span><h2>What our Customers are Saying</h2></div><div class="testimonial-grid">
         @foreach ($testimonials as $testimonial)<x-cards.testimonial-card :testimonial="$testimonial" />@endforeach
-    </div><div class="center-link"><a href="{{ url('/testimonials') }}">View All <span aria-hidden="true">→</span></a></div></div>
+    </div><div class="center-link"><a href="{{ route('testimonials') }}">View All <span aria-hidden="true">→</span></a></div></div>
 </section>
 
 <section class="cta-section"><div class="site-shell"><div class="cta-card"><h2>Innovate and Transform with AINCHORS to unlock the Full Potential</h2><a class="primary-button" href="https://wa.me/+61418802086">Contact Us! <span aria-hidden="true">→</span></a></div></div></section>

@@ -9,10 +9,34 @@ use App\Http\Controllers\Courses\CourseLearningController;
 use App\Http\Controllers\Courses\CourseMediaController;
 use App\Http\Controllers\Courses\MyCoursesController;
 use App\Http\Controllers\Legacy\LegacyPageController;
+use App\Http\Controllers\Modules\HomeController;
+use App\Http\Controllers\Public\ContactSubmissionController;
+use App\Http\Controllers\Public\PublicPageController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [LegacyPageController::class, 'home']);
-Route::get('/home', [LegacyPageController::class, 'home'])->name('home');
+Route::get('/', HomeController::class)->name('home');
+Route::redirect('/home', '/', 301)->name('home.legacy');
+
+Route::controller(PublicPageController::class)->group(function (): void {
+    Route::get('/about-us-814253', 'about')->name('about');
+    Route::get('/trainers-profile', 'trainers')->name('trainers');
+    Route::get('/testimonials', 'testimonials')->name('testimonials');
+    Route::get('/success-story-of-angie', 'successStory')->name('success-story');
+    Route::get('/consulting-main', 'consultingMain')->name('consulting.main');
+    Route::get('/consulting-gov', 'consultingGovernment')->name('consulting.government');
+    Route::get('/consulting-private', 'consultingPrivate')->name('consulting.private');
+    Route::get('/faqs', 'faqs')->name('faqs');
+    Route::get('/hiring-page', 'hiring')->name('hiring');
+    Route::get('/contact-us', 'contact')->name('contact');
+    Route::get('/terms--conditions', 'terms')->name('terms');
+    Route::get('/privacy--policy', 'privacy')->name('privacy');
+    Route::get('/events', 'events')->name('events');
+});
+
+Route::get('/_legacy/{path}', [LegacyPageController::class, 'embedded'])
+    ->where('path', '[A-Za-z0-9\/-]+')
+    ->name('legacy.embedded');
+Route::post('/contact-submissions', ContactSubmissionController::class)->name('contact.submit');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');

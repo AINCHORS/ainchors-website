@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'settings' => [
+        'welcome_modal_frequency' => 'every_page',
+    ],
     'navigation' => [
         ['label' => 'Home', 'url' => '/home'],
         ['label' => 'About us', 'url' => '/about-us-814253'],

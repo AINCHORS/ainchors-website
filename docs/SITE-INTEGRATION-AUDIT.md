@@ -71,3 +71,12 @@ Existing working domains:
 2. Promote the existing native home module to the canonical home route and apply the shared shell to native public/auth/admin views, using exact legacy factual content where content is migrated.
 3. Add small, additive schema changes for settings, contact submissions, admin audit entries, and page views. Reuse the existing users role column, orders/payments/enrollments, visitor/session/event models and commerce services.
 4. Build public, auth, admin, analytics and SEO features in the prescribed phase order, preserving current course purchase and protected-learning behavior.
+
+## Phase 1 implementation outcome
+
+- `/` is now the single native, named canonical home route; `/home` remains a 301 compatibility redirect.
+- The required public paths are explicit named routes. Informational legacy content is deliberately rendered inside a same-origin, auto-sizing frame beneath the native header/footer. The legacy navigation and footer are removed only inside that frame, while raw factual content and original imagery remain intact. Internal links navigate the parent Laravel page.
+- The desktop and mobile header now use the requested Training and Consulting disclosure hierarchies. Consulting contains exactly Consulting Introduction, Public / Government Sector and Private Sector. Guests receive Login and Register; authenticated users receive Account navigation, with future profile/history/admin destinations guarded until their Phase 2/3 routes are introduced.
+- The footer form and legacy contact-page form now share ContactSubmissionService and store validated enquiries as CRM leads. No email destination or credential was invented.
+- A configurable welcome_modal_frequency setting has a safe default of every_page; the accessible guest welcome modal excludes authentication and checkout flows.
+- Browser QA at 375, 390, 768, 1024, 1280 and 1440 found no horizontal overflow. Desktop/mobile hierarchy, iframe shell isolation and responsive header behavior were verified.
