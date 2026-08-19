@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Commerce\CheckoutController;
 use App\Http\Controllers\Commerce\PaymentSuccessController;
@@ -12,6 +14,8 @@ use App\Http\Controllers\Legacy\LegacyPageController;
 use App\Http\Controllers\Modules\HomeController;
 use App\Http\Controllers\Public\ContactSubmissionController;
 use App\Http\Controllers\Public\PublicPageController;
+use App\Http\Controllers\User\ProfileController;
+use App\Http\Controllers\User\PurchaseHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -40,9 +44,13 @@ Route::post('/contact-submissions', ContactSubmissionController::class)->name('c
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:login')->name('login.store');
     Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+    Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('throttle:registration')->name('register.store');
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->middleware('throttle:password-reset')->name('password.email');
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])->middleware('throttle:password-reset')->name('password.update');
 });
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');
@@ -52,6 +60,10 @@ Route::get('/courses/{course:slug}', [CourseCatalogController::class, 'show'])->
 Route::get('/course-packages/{package:slug}', [CourseCatalogController::class, 'package'])->name('packages.show');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+    Route::get('/purchase-history', PurchaseHistoryController::class)->name('purchase-history');
     Route::get('/checkouts/{product:slug}', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkouts/{product:slug}', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/orders/{order:order_number}/success', PaymentSuccessController::class)->name('checkout.success');

@@ -40,6 +40,7 @@ class CourseCommerceTest extends TestCase
         $response = $this->post(route('register.store'), [
             'name' => 'New Learner', 'email' => 'new@example.com',
             'password' => 'password123', 'password_confirmation' => 'password123',
+            'terms' => '1',
         ]);
 
         $response->assertRedirect(route('checkout.show', $course));
