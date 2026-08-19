@@ -64,4 +64,16 @@ class PublicSiteIntegrationTest extends TestCase
         $this->get(route('home'))->assertSee('Welcome to AINCHORS');
         $this->get(route('courses.index'))->assertDontSee('Welcome to AINCHORS');
     }
+
+    public function test_public_shell_uses_a_compact_footer_and_one_fixed_ai_assistant_surface(): void
+    {
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Contact &amp; Locations', false)
+            ->assertDontSee('Begin Your Journey Today!')
+            ->assertDontSee('footer-full-name')
+            ->assertSee('id="ai-assistant-panel"', false)
+            ->assertSee('aria-label="Open AI Assistant"', false)
+            ->assertSee('Ask AINCHORS something...');
+    }
 }

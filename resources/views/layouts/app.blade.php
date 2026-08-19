@@ -16,5 +16,6 @@
     </main>
     <x-welcome-modal />
     <x-site-footer />
+    <x-ai-assistant />
 </body>
 </html>
