@@ -17,6 +17,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/private/courses/**
 /vendor
 Homestead.json
 Homestead.yaml

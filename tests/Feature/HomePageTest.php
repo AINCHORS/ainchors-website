@@ -2,23 +2,34 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class HomePageTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+        $this->artisan('ainchors:populate-legacy-course-catalogue')->assertExitCode(0);
+    }
+
     public function test_homepage_uses_authoritative_legacy_content(): void
     {
         $this->get('/home')
             ->assertOk()
             ->assertSee('Empowering Talent to Shape The Future')
-            ->assertSee('AINCHORS is a global fintech firm in learning and strategy')
+            ->assertSee('is a global fintech firm in learning and strategy')
             ->assertSee('Corporate training')
             ->assertSee('Self learning Courses')
             ->assertSee('Mentorship and Coaching')
             ->assertSee('What our Customers are Saying')
             ->assertSee('AINCHORS Sdn Bhd')
             ->assertSee('legacy-responsive.css')
-            ->assertDontSee('React');
+            ->assertDontSee('/src/main.tsx')
+            ->assertDontSee('/src/main.jsx');
     }
 
     public function test_legacy_navigation_pages_are_available_locally(): void

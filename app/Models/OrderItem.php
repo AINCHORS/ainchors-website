@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class OrderItem extends Model
 {
@@ -24,8 +23,23 @@ class OrderItem extends Model
         ];
     }
 
-    public function order(): BelongsTo { return $this->belongsTo(Order::class); }
-    public function product(): BelongsTo { return $this->belongsTo(Product::class); }
-    public function enrollment(): HasOne { return $this->hasOne(Enrollment::class, 'source_order_item_id'); }
-    public function serviceEngagements(): HasMany { return $this->hasMany(ServiceEngagement::class); }
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class, 'source_order_item_id');
+    }
+
+    public function serviceEngagements(): HasMany
+    {
+        return $this->hasMany(ServiceEngagement::class);
+    }
 }

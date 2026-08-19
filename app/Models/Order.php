@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     protected $fillable = [
-        'order_number', 'user_id', 'status', 'currency', 'subtotal',
+        'order_number', 'idempotency_key', 'user_id', 'status', 'currency', 'subtotal',
         'discount_total', 'tax_total', 'total_amount', 'placed_at',
     ];
 
@@ -22,8 +22,28 @@ class Order extends Model
         ];
     }
 
-    public function user(): BelongsTo { return $this->belongsTo(User::class); }
-    public function items(): HasMany { return $this->hasMany(OrderItem::class); }
-    public function payments(): HasMany { return $this->hasMany(Payment::class); }
-    public function workflowAudits(): HasMany { return $this->hasMany(WorkflowAudit::class); }
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function workflowAudits(): HasMany
+    {
+        return $this->hasMany(WorkflowAudit::class);
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'order_number';
+    }
 }

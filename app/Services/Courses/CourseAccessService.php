@@ -13,7 +13,7 @@ class CourseAccessService
         return Enrollment::query()
             ->where('user_id', $user->id)
             ->where('product_id', $product->id)
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'completed'])
             ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->latest('enrolled_at')
             ->first();
@@ -21,6 +21,6 @@ class CourseAccessService
 
     public function canAccess(User $user, Product $product): bool
     {
-        return $this->activeEnrollment($user, $product) !== null;
+        return $product->isCourse() && $this->activeEnrollment($user, $product) !== null;
     }
 }

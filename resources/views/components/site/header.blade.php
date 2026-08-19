@@ -26,6 +26,18 @@
                     <a href="{{ url($item['url']) }}" @class(['nav-featured' => $item['featured'] ?? false])>{{ $item['label'] }}</a>
                 @endif
             @endforeach
+            <div class="account-navigation">
+                @guest
+                    <a href="{{ route('login') }}">Login</a>
+                    <a href="{{ route('register') }}" class="nav-featured">Register</a>
+                @else
+                    <a href="{{ route('my-courses') }}">My Courses</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit">Logout</button>
+                    </form>
+                @endguest
+            </div>
         </nav>
     </div>
 </header>
