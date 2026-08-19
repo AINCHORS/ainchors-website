@@ -30,18 +30,15 @@
         <div class="course-grid">
             @foreach ($courses as $course)
                 @php($owned = in_array($course->id, $ownedCourseIds, true))
-                <article class="course-card">
-                    <img src="{{ asset($course->image) }}" alt="{{ $course->name }}">
-                    <div>
-                        <span class="course-label">Self-learning course</span>
-                        <h2>{{ $course->name }}</h2>
-                        <p>{{ $course->short_description }}</p>
-                        <div class="price-line"><del>USD {{ number_format($course->listPrice(), 0) }}</del><strong>USD {{ number_format((float) $course->price, 0) }}</strong></div>
-                        <a class="primary-button" href="{{ $owned ? route('learn.show', $course) : route('courses.show', $course) }}">
-                            {{ $owned ? 'ACCESS COURSE' : 'VIEW COURSE' }}
-                        </a>
-                    </div>
-                </article>
+                <x-course-card
+                    :image="asset($course->image)"
+                    :title="$course->name"
+                    :description="$course->short_description"
+                    :price-original="number_format($course->listPrice(), 0)"
+                    :price-current="number_format((float) $course->price, 0)"
+                    :href="$owned ? route('learn.show', $course) : route('courses.show', $course)"
+                    :button-label="$owned ? 'ACCESS COURSE' : 'VIEW COURSE'"
+                />
             @endforeach
         </div>
     </div>

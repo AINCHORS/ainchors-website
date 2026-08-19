@@ -16,14 +16,33 @@
 </section>
 
 <section class="client-section">
-    <div class="site-shell"><h2>Our International Clients and Partners</h2><div class="client-grid">
-        @foreach ($clients as $client)<img src="{{ asset($client['image']) }}" alt="{{ $client['alt'] }}" loading="lazy">@endforeach
-    </div></div>
+    <div class="site-shell">
+        <h2>Our International Clients and Partners</h2>
+        <div class="logo-showcase-wrapper" aria-label="AINCHORS international clients and partners">
+            <div class="logo-showcase-track py-4">
+                @foreach ($clients as $client)
+                    <img src="{{ asset($client['image']) }}" alt="{{ $client['alt'] }}" class="h-14 w-40 flex-none object-contain" loading="lazy">
+                @endforeach
+                @foreach ($clients as $client)
+                    <img src="{{ asset($client['image']) }}" alt="" aria-hidden="true" class="h-14 w-40 flex-none object-contain" loading="lazy">
+                @endforeach
+            </div>
+        </div>
+    </div>
 </section>
 
 <section class="section services-section">
     <div class="site-shell"><div class="section-heading"><span>What We Offer</span><h2>What We Offer</h2><p>Our courses are crafted by industry veterans with decades of real-world expertise.</p></div><div class="services-grid">
-        @foreach ($services as $service)<x-cards.service-card :service="$service" />@endforeach
+        @foreach ($services as $index => $service)
+            <x-service-card
+                :variant="['blue', 'green', 'orange'][$index]"
+                :image="asset($service['image'])"
+                :title="$service['heading']"
+                :description="$service['body']"
+                :button-label="$service['label']"
+                :button-href="$service['url']"
+            />
+        @endforeach
     </div></div>
 </section>
 

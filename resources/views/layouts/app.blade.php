@@ -10,13 +10,10 @@
 </head>
 <body class="min-h-screen bg-white text-slate-900 antialiased">
     <a href="#main-content" class="skip-link">Skip to content</a>
-    <x-site.header :navigation="$navigation" />
+    <x-site-header />
     <main id="main-content">
         @yield('content')
     </main>
-    <x-site.footer :footer="$footer" />
-    <a class="whatsapp-float" href="https://wa.me/+61418802086" target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp">
-        <img src="{{ asset('assets/whatsapp.svg') }}" alt="">
-    </a>
+    <x-site-footer />
 </body>
 </html>
