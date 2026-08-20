@@ -310,7 +310,7 @@
                             <p>
                                 Email:
                                 <a
-                                    href="mailto:info@ainchors.com"
+                                    href="https://mail.google.com/mail/?view=cm&fs=1&to=info@ainchors.com"
                                     class="text-white transition hover:text-ainchors-green"
                                 >
                                     info@ainchors.com
