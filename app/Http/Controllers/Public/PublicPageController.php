@@ -9,7 +9,7 @@ class PublicPageController extends Controller
 {
     /** @var array<string, array{slug: string, title: string}> */
     private const PAGES = [
-        'about' => ['slug' => 'about-us-814253', 'title' => 'About Us | AINCHORS'],
+        'about' => ['slug' => 'about-us', 'title' => 'About Us | AINCHORS'],
         'trainers' => ['slug' => 'trainers-profile', 'title' => 'Trainer Profiles | AINCHORS'],
         'testimonials' => ['slug' => 'testimonials', 'title' => 'Testimonials | AINCHORS'],
         'successStory' => ['slug' => 'success-story-of-angie', 'title' => 'Success Story | AINCHORS'],
@@ -24,19 +24,58 @@ class PublicPageController extends Controller
         'events' => ['slug' => 'events', 'title' => 'Events | AINCHORS'],
     ];
 
-    public function about(): View { return $this->legacy(self::PAGES['about']); }
-    public function trainers(): View { return $this->legacy(self::PAGES['trainers']); }
-    public function testimonials(): View { return $this->legacy(self::PAGES['testimonials']); }
-    public function successStory(): View { return $this->legacy(self::PAGES['successStory']); }
-    public function consultingMain(): View { return $this->legacy(self::PAGES['consultingMain']); }
-    public function consultingGovernment(): View { return $this->legacy(self::PAGES['consultingGovernment']); }
-    public function consultingPrivate(): View { return $this->legacy(self::PAGES['consultingPrivate']); }
-    public function faqs(): View { return $this->legacy(self::PAGES['faqs']); }
-    public function hiring(): View { return $this->legacy(self::PAGES['hiring']); }
-    public function contact(): View { return $this->legacy(self::PAGES['contact']); }
-    public function terms(): View { return $this->legacy(self::PAGES['terms']); }
-    public function privacy(): View { return $this->legacy(self::PAGES['privacy']); }
-    public function events(): View { return $this->legacy(self::PAGES['events']); }
+    public function about(): View
+    {
+        return $this->legacy(self::PAGES['about']);
+    }
+    public function trainers(): View
+    {
+        return $this->legacy(self::PAGES['trainers']);
+    }
+    public function testimonials(): View
+    {
+        return $this->legacy(self::PAGES['testimonials']);
+    }
+    public function successStory(): View
+    {
+        return $this->legacy(self::PAGES['successStory']);
+    }
+    public function consultingMain(): View
+    {
+        return $this->legacy(self::PAGES['consultingMain']);
+    }
+    public function consultingGovernment(): View
+    {
+        return $this->legacy(self::PAGES['consultingGovernment']);
+    }
+    public function consultingPrivate(): View
+    {
+        return $this->legacy(self::PAGES['consultingPrivate']);
+    }
+    public function faqs(): View
+    {
+        return $this->legacy(self::PAGES['faqs']);
+    }
+    public function hiring(): View
+    {
+        return $this->legacy(self::PAGES['hiring']);
+    }
+    public function contact(): View
+    {
+        return $this->legacy(self::PAGES['contact']);
+    }
+    public function terms(): View
+    {
+        return $this->legacy(self::PAGES['terms']);
+    }
+    public function privacy(): View
+    {
+        return $this->legacy(self::PAGES['privacy']);
+    }
+    public function events(): View
+    {
+        return $this->legacy(self::PAGES['events']);
+    }
 
     /** @param array{slug: string, title: string} $page */
     private function legacy(array $page): View

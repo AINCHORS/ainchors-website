@@ -22,7 +22,7 @@ Route::get('/', HomeController::class)->name('home');
 Route::redirect('/home', '/', 301)->name('home.legacy');
 
 Route::controller(PublicPageController::class)->group(function (): void {
-    Route::get('/about-us-814253', 'about')->name('about');
+    Route::get('/about-us', 'about')->name('about');
     Route::get('/trainers-profile', 'trainers')->name('trainers');
     Route::get('/testimonials', 'testimonials')->name('testimonials');
     Route::get('/success-story-of-angie', 'successStory')->name('success-story');

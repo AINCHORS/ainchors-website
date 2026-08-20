@@ -27,7 +27,7 @@ Existing working domains:
 | Route | Name | Controller / view | Auth | Admin | Rendering | Header / footer | Status and problem |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `/`, `/home` | `home` only for `/home` | `LegacyPageController@home`, raw `resources/legacy/home/index.html` | No | No | Legacy | Legacy embedded in raw HTML | Works but bypasses the new layout/design system; duplicate home URLs. |
-| `/about-us-814253` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Works only through catch-all; no named canonical route. |
+| `/about-us` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Works only through catch-all; no named canonical route. |
 | `/trainers-profile` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Catch-all only; no named route. |
 | `/testimonials` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Catch-all only; no named route. |
 | `/courses` | `courses.index` | `CourseCatalogController@index`, `courses/index` | No | No | Native | New public shell | Native, but typography/layout coexist with old CSS classes. |

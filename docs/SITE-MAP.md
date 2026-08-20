@@ -1,7 +1,7 @@
 # Site map
 
 - Home: `/home`
-- About us: `/about-us-814253`
+- About us: `/about-us`
 - Training
   - Trainer Profiles: `/trainers-profile`
   - Testimonials: `/testimonials`

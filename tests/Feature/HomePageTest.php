@@ -40,8 +40,8 @@ class HomePageTest extends TestCase
 
     public function test_public_navigation_pages_have_explicit_routes_and_the_legacy_fallback_remains_available(): void
     {
-        foreach (['about-us-814253', 'trainers-profile', 'testimonials', 'courses', 'success-story-of-angie', 'consulting-main', 'consulting-gov', 'consulting-private', 'faqs', 'hiring-page', 'contact-us', 'terms--conditions', 'privacy--policy'] as $path) {
-            $this->get('/'.$path)->assertOk();
+        foreach (['about-us', 'trainers-profile', 'testimonials', 'courses', 'success-story-of-angie', 'consulting-main', 'consulting-gov', 'consulting-private', 'faqs', 'hiring-page', 'contact-us', 'terms--conditions', 'privacy--policy'] as $path) {
+            $this->get('/' . $path)->assertOk();
         }
 
         $this->get('/product-details/product/6a55cb4d03821e4f56e9e11f')->assertOk();

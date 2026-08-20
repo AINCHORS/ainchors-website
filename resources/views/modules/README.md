@@ -7,7 +7,7 @@ listed below unchanged.
 | Root | Routes |
 | --- | --- |
 | `home/` | `/`, `/home` |
-| `company/about/` | `/about-us-814253` |
+| `company/about/` | `/about-us` |
 | `training/courses/` | `/courses` and course catalogue pages |
 | `training/trainers/` | `/trainers-profile` |
 | `training/testimonials/` | `/testimonials` |
