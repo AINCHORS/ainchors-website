@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'admin' => [
+        'email' => strtolower(trim((string) env('AINCHORS_ADMIN_EMAIL', 'info@ainchors.com'))),
+    ],
     'settings' => [
         'welcome_modal_frequency' => 'every_page',
     ],
