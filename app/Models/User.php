@@ -33,8 +33,9 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::saving(function (self $user): void {
-            // Database unique index: one admin is represented by 1; every
-            // ordinary user is NULL, which may repeat in a unique index.
+            // The unique marker prevents a second administrator through normal
+            // Eloquent writes. Authorization also verifies the configured
+            // administrator email because MariaDB permits repeated NULL values.
             $user->admin_singleton = $user->role === 'admin' ? 1 : null;
         });
     }
@@ -58,5 +59,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function isAuthorizedAdmin(): bool
+    {
+        $configuredEmail = strtolower(trim((string) config('ainchors.admin.email', '')));
+
+        return $this->isAdmin()
+            && $this->status === 'active'
+            && $configuredEmail !== ''
+            && strtolower(trim((string) $this->email)) === $configuredEmail;
     }
 }
