@@ -69,7 +69,9 @@ class AuthenticatedSessionController extends Controller
             $path = parse_url($intended, PHP_URL_PATH);
 
             if (is_string($path) && ($path === '/admin' || str_starts_with($path, '/admin/'))) {
-                return $intended;
+                $query = parse_url($intended, PHP_URL_QUERY);
+
+                return $path.(is_string($query) && $query !== '' ? '?'.$query : '');
             }
         }
 
