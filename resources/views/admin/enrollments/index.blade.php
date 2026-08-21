@@ -57,12 +57,8 @@
                             <td class="px-5 py-4">@include('admin.partials.status-badge', ['status' => $enrollment->status])</td>
                             <td class="px-5 py-4 text-ainchors-grey-dark">{{ $enrollment->expires_at?->format('j M Y') ?? 'No expiry' }}</td>
                             @if ($enrollment->status !== 'revoked')
-                                <form method="POST" action="{{ route('admin.enrollments.revoke', $enrollment) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <td class="px-5 py-4"><label class="sr-only" for="revoke-reason-{{ $enrollment->id }}">Reason for revoking enrollment</label><input id="revoke-reason-{{ $enrollment->id }}" name="reason" type="text" maxlength="500" required placeholder="Reason required" class="w-52 rounded-ainchors-button border border-ainchors-grey-light/45 px-2.5 py-1.5 text-xs text-ainchors-navy focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25"></td>
-                                    <td class="px-5 py-4 text-right"><button type="submit" class="font-semibold text-red-700 transition hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500">Revoke<span class="sr-only"> {{ $enrollment->product?->name ?? 'enrollment' }} for {{ $enrollment->user?->full_name ?? 'user' }}</span></button></td>
-                                </form>
+                                <td class="px-5 py-4"><label class="sr-only" for="revoke-reason-{{ $enrollment->id }}">Reason for revoking enrollment</label><input id="revoke-reason-{{ $enrollment->id }}" name="reason" form="revoke-enrollment-{{ $enrollment->id }}" type="text" maxlength="500" required placeholder="Reason required" class="w-52 rounded-ainchors-button border border-ainchors-grey-light/45 px-2.5 py-1.5 text-xs text-ainchors-navy focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25"></td>
+                                <td class="px-5 py-4 text-right"><form id="revoke-enrollment-{{ $enrollment->id }}" method="POST" action="{{ route('admin.enrollments.revoke', $enrollment) }}" class="inline">@csrf @method('PATCH')<button type="submit" class="font-semibold text-red-700 transition hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-red-500">Revoke<span class="sr-only"> {{ $enrollment->product?->name ?? 'enrollment' }} for {{ $enrollment->user?->full_name ?? 'user' }}</span></button></form></td>
                             @else
                                 <td class="px-5 py-4 text-ainchors-grey-light">—</td><td class="px-5 py-4 text-right"><span class="text-xs font-semibold text-ainchors-grey-light">Already revoked</span></td>
                             @endif
