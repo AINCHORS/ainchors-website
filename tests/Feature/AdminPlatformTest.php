@@ -232,7 +232,11 @@ class AdminPlatformTest extends TestCase
         $course = $this->configuredCourse('admin-enrollment-course', 'Admin Enrollment Course');
 
         $this->actingAs($admin)
-            ->post(route('admin.enrollments.store'), ['user_id' => $learner->id, 'product_id' => $course->id])
+            ->post(route('admin.enrollments.store'), [
+                'user_id' => $learner->id,
+                'product_id' => $course->id,
+                'reason' => 'Corporate training entitlement.',
+            ])
             ->assertRedirect(route('admin.enrollments.index'));
 
         $enrollment = Enrollment::query()->where('user_id', $learner->id)->where('product_id', $course->id)->firstOrFail();
@@ -240,12 +244,16 @@ class AdminPlatformTest extends TestCase
         $this->assertDatabaseHas('admin_audit_logs', ['action' => 'ENROLLMENT_GRANTED', 'entity_id' => (string) $enrollment->id]);
 
         $this->actingAs($admin)
-            ->post(route('admin.enrollments.store'), ['user_id' => $learner->id, 'product_id' => $course->id])
+            ->post(route('admin.enrollments.store'), [
+                'user_id' => $learner->id,
+                'product_id' => $course->id,
+                'reason' => 'Duplicate grant safety check.',
+            ])
             ->assertRedirect(route('admin.enrollments.index'));
         $this->assertDatabaseCount('enrollments', 1);
 
         $this->actingAs($admin)
-            ->patch(route('admin.enrollments.revoke', $enrollment))
+            ->patch(route('admin.enrollments.revoke', $enrollment), ['reason' => 'Access entitlement ended.'])
             ->assertRedirect(route('admin.enrollments.index'));
 
         $this->assertSame('revoked', $enrollment->fresh()->status);
