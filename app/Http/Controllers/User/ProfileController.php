@@ -19,9 +19,23 @@ class ProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
+        $emailRules = [
+            'required',
+            'email',
+            'max:255',
+            Rule::unique('users', 'email')->ignore($user->id),
+        ];
+
+        if ($user->isAdmin()) {
+            $configuredEmail = strtolower(trim((string) config('ainchors.admin.email', '')));
+            $emailRules[] = Rule::in([$configuredEmail]);
+        }
+
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'email' => $emailRules,
+        ], [
+            'email.in' => 'The administrator email is controlled by AINCHORS_ADMIN_EMAIL and cannot be changed from the website profile.',
         ]);
 
         $user->update($validated);
