@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Hash;
 
 class CreateAdmin extends Command
 {
-    private const SOLE_ADMIN_EMAIL = 'info@ainchors.com';
-
     protected $signature = 'ainchors:create-admin
                             {--email= : Administrator email address}';
 
@@ -18,19 +16,25 @@ class CreateAdmin extends Command
 
     public function handle(): int
     {
+        $soleAdminEmail = $this->soleAdminEmail();
+
+        if ($soleAdminEmail === null) {
+            return self::FAILURE;
+        }
+
         $email = $this->normalizedEmail();
 
         if ($email === null) {
             return self::FAILURE;
         }
 
-        if ($email !== self::SOLE_ADMIN_EMAIL) {
-            $this->error('The only permitted administrator account is info@ainchors.com.');
+        if ($email !== $soleAdminEmail) {
+            $this->error("The only permitted administrator account is {$soleAdminEmail}.");
 
             return self::FAILURE;
         }
 
-        $existing = User::query()->where('email', $email)->first();
+        $existing = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
 
         if ($existing !== null) {
             return $this->promoteExisting($existing);
@@ -67,6 +71,19 @@ class CreateAdmin extends Command
         $this->info("Administrator created for {$admin->email}.");
 
         return self::SUCCESS;
+    }
+
+    private function soleAdminEmail(): ?string
+    {
+        $email = strtolower(trim((string) config('ainchors.admin.email', '')));
+
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->error('AINCHORS_ADMIN_EMAIL must contain a valid administrator email address.');
+
+            return null;
+        }
+
+        return $email;
     }
 
     private function normalizedEmail(): ?string
@@ -118,10 +135,16 @@ class CreateAdmin extends Command
 
     private function promoteExisting(User $user): int
     {
-        if ($user->isAdmin()) {
-            $this->warn("{$user->email} is already an administrator. No changes were made.");
+        if ($user->isAuthorizedAdmin()) {
+            $this->warn("{$user->email} is already the configured administrator. No changes were made.");
 
             return self::SUCCESS;
+        }
+
+        if ($user->isAdmin()) {
+            $this->error('The existing administrator record is not authorized by the configured administrator identity.');
+
+            return self::FAILURE;
         }
 
         if (User::query()->where('role', 'admin')->exists()) {
@@ -137,7 +160,7 @@ class CreateAdmin extends Command
         }
 
         DB::transaction(function () use ($user): void {
-            $user->forceFill(['role' => 'admin'])->save();
+            $user->forceFill(['role' => 'admin', 'status' => 'active'])->save();
         });
 
         $this->info("Existing account {$user->email} has been promoted to administrator.");
