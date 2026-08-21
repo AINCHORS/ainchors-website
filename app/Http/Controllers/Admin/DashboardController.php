@@ -17,6 +17,8 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
+        $paidPayments = Payment::query()->where('status', 'paid')->count();
+
         $metrics = [
             'total_users' => User::query()->count(),
             'new_users' => User::query()->where('created_at', '>=', now()->subDays(30))->count(),
@@ -26,7 +28,10 @@ class DashboardController extends Controller
             'total_orders' => Order::query()->count(),
             'awaiting_payment_orders' => Order::query()->whereIn('status', ['pending', 'awaiting_payment'])->count(),
             'completed_orders' => Order::query()->where('status', 'completed')->count(),
-            'paid_payments' => Payment::query()->where('status', 'paid')->count(),
+            'paid_payments' => $paidPayments,
+            // Keep the original metric key during Phase 1 so existing admin
+            // regression tests and any internal references remain compatible.
+            'completed_payments' => $paidPayments,
             'pending_payments' => Payment::query()->whereIn('status', ['pending', 'processing'])->count(),
             'failed_payments' => Payment::query()->where('status', 'failed')->count(),
             'test_payments' => Payment::query()->where('provider', 'demo')->count(),
