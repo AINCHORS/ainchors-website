@@ -60,7 +60,7 @@ class AdminPlatformTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Dashboard')
-            ->assertSee('Demo/test payment')
+            ->assertSee('Demo / test')
             ->assertViewHas('metrics', fn (array $metrics): bool => $metrics['total_users'] === 2
                 && $metrics['total_orders'] === 1
                 && $metrics['completed_payments'] === 1);
