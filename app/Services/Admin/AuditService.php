@@ -42,6 +42,18 @@ class AuditService
     }
 
     /**
+     * Re-apply the same redaction rules before rendering historical audit rows.
+     * This protects the viewer even if an older row predates current writers.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    public function sanitizeForDisplay(array $attributes): array
+    {
+        return $this->redact($attributes);
+    }
+
+    /**
      * @return array{string, string|null}
      */
     private function entityDetails(Model|string $entity): array
