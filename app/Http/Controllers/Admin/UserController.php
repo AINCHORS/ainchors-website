@@ -204,7 +204,7 @@ class UserController extends Controller
             ]);
         }
 
-        if ($subject->isAdmin() && $subject->status === 'active' && $newStatus !== 'active' && $this->activeAdminCount() <= 1) {
+        if ($subject->isAuthorizedAdmin() && $newStatus !== 'active' && $this->activeAdminCount() <= 1) {
             throw ValidationException::withMessages([
                 'status' => 'The configured administrator account must remain active.',
             ]);
