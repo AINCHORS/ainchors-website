@@ -12,17 +12,44 @@
     <a href="#main-content" class="skip-link">Skip to content</a>
 
     @php
-        $navigation = [
-            ['route' => 'admin.dashboard', 'active' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard'],
-            ['route' => 'admin.users.index', 'active' => 'admin.users.*', 'label' => 'Users', 'icon' => 'users'],
-            ['route' => 'admin.products.index', 'active' => 'admin.products.*', 'label' => 'Products', 'icon' => 'products'],
-            ['route' => 'admin.course-content.index', 'active' => 'admin.course-content.*', 'label' => 'Course content', 'icon' => 'products'],
-            ['route' => 'admin.orders.index', 'active' => 'admin.orders.*', 'label' => 'Orders', 'icon' => 'orders'],
-            ['route' => 'admin.payments.index', 'active' => 'admin.payments.*', 'label' => 'Payments', 'icon' => 'payments'],
-            ['route' => 'admin.enrollments.index', 'active' => 'admin.enrollments.*', 'label' => 'Enrollments', 'icon' => 'enrollments'],
-            ['route' => 'admin.job-applications.index', 'active' => 'admin.job-applications.*', 'label' => 'Job applications', 'icon' => 'users'],
-            ['route' => 'admin.leads.index', 'active' => 'admin.leads.*', 'label' => 'Contact submissions', 'icon' => 'leads'],
-            ['route' => 'admin.settings.index', 'active' => 'admin.settings.*', 'label' => 'Settings', 'icon' => 'settings'],
+        $navigationSections = [
+            [
+                'label' => 'Management',
+                'items' => [
+                    ['route' => 'admin.dashboard', 'active' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard'],
+                    ['route' => 'admin.users.index', 'active' => 'admin.users.*', 'label' => 'Users', 'icon' => 'users'],
+                    ['route' => 'admin.products.index', 'active' => ['admin.products.*', 'admin.package-members.*'], 'label' => 'Products', 'icon' => 'products'],
+                    ['route' => 'admin.course-content.index', 'active' => 'admin.course-content.*', 'label' => 'Course content', 'icon' => 'products'],
+                    ['route' => 'admin.enrollments.index', 'active' => 'admin.enrollments.*', 'label' => 'Enrollments', 'icon' => 'enrollments'],
+                ],
+            ],
+            [
+                'label' => 'Commerce',
+                'items' => [
+                    ['route' => 'admin.orders.index', 'active' => 'admin.orders.*', 'label' => 'Orders', 'icon' => 'orders'],
+                    ['route' => 'admin.payments.index', 'active' => 'admin.payments.*', 'label' => 'Payments', 'icon' => 'payments'],
+                ],
+            ],
+            [
+                'label' => 'CRM',
+                'items' => [
+                    ['route' => 'admin.leads.index', 'active' => 'admin.leads.*', 'label' => 'Contact submissions', 'icon' => 'leads'],
+                    ['route' => 'admin.consultations.index', 'active' => 'admin.consultations.*', 'label' => 'Consultations', 'icon' => 'consultations'],
+                ],
+            ],
+            [
+                'label' => 'Careers',
+                'items' => [
+                    ['route' => 'admin.job-applications.index', 'active' => 'admin.job-applications.*', 'label' => 'Job applications', 'icon' => 'users'],
+                ],
+            ],
+            [
+                'label' => 'System',
+                'items' => [
+                    ['route' => 'admin.audit-log.index', 'active' => 'admin.audit-log.*', 'label' => 'Audit log', 'icon' => 'audit'],
+                    ['route' => 'admin.settings.index', 'active' => 'admin.settings.*', 'label' => 'Settings', 'icon' => 'settings'],
+                ],
+            ],
         ];
         $utilityNavigation = [
             ['label' => 'Analytics', 'icon' => 'analytics'],
@@ -33,32 +60,35 @@
     <div class="min-h-screen lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)]">
         <aside class="hidden min-h-screen border-r border-ainchors-navy/10 bg-ainchors-navy text-white lg:sticky lg:top-0 lg:flex lg:max-h-screen lg:flex-col">
             <div class="border-b border-white/10 px-6 py-6">
-                <a href="{{ route('home') }}" class="inline-flex items-center gap-3 rounded-ainchors-button focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy">
-                    <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS Training &amp; Consulting" class="h-10 w-auto brightness-0 invert">
+                <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-3 rounded-ainchors-button focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy">
+                    <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS" class="h-10 w-auto brightness-0 invert">
                     <span class="border-l border-white/20 pl-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/75">Admin</span>
                 </a>
             </div>
 
             <nav aria-label="Admin navigation" class="flex-1 overflow-y-auto px-3 py-5">
-                <p class="px-3 pb-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-white/45">Manage</p>
-                <div class="space-y-1">
-                    @foreach ($navigation as $item)
-                        @php($available = \Illuminate\Support\Facades\Route::has($item['route']))
-                        @if ($available)
-                            <a href="{{ route($item['route']) }}" @class([
-                                'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy',
-                                'bg-white/12 text-white shadow-sm' => request()->routeIs($item['active']),
-                                'text-white/75 hover:bg-white/8 hover:text-white' => ! request()->routeIs($item['active']),
-                            ])>
-                                @include('admin.partials.navigation-icon', ['icon' => $item['icon']])
-                                <span>{{ $item['label'] }}</span>
-                            </a>
-                        @endif
-                    @endforeach
-                </div>
+                @foreach ($navigationSections as $section)
+                    <div @class(['mt-6 border-t border-white/10 pt-5' => ! $loop->first])>
+                        <p class="px-3 pb-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-white/45">{{ $section['label'] }}</p>
+                        <div class="space-y-1">
+                            @foreach ($section['items'] as $item)
+                                @if (\Illuminate\Support\Facades\Route::has($item['route']))
+                                    <a href="{{ route($item['route']) }}" @class([
+                                        'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy',
+                                        'bg-white/12 text-white shadow-sm' => request()->routeIs($item['active']),
+                                        'text-white/75 hover:bg-white/8 hover:text-white' => ! request()->routeIs($item['active']),
+                                    ])>
+                                        @include('admin.partials.navigation-icon', ['icon' => $item['icon']])
+                                        <span>{{ $item['label'] }}</span>
+                                    </a>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
 
                 <div class="mt-7 border-t border-white/10 pt-5">
-                    <p class="px-3 pb-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-white/45">Coming next</p>
+                    <p class="px-3 pb-2 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-white/45">Later phases</p>
                     <div class="space-y-1">
                         @foreach ($utilityNavigation as $item)
                             <span aria-disabled="true" title="Available in a future phase" class="flex cursor-not-allowed items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold text-white/35">
@@ -72,10 +102,6 @@
             </nav>
 
             <div class="border-t border-white/10 p-4">
-                <a href="{{ route('home') }}" class="mb-1 flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold text-white/75 transition hover:bg-white/8 hover:text-white focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy">
-                    @include('admin.partials.navigation-icon', ['icon' => 'website'])
-                    Back to website
-                </a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="flex w-full items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-left text-sm font-semibold text-white/75 transition hover:bg-white/8 hover:text-white focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy">
@@ -89,8 +115,8 @@
         <div class="min-w-0">
             <header class="sticky top-0 z-40 border-b border-ainchors-navy/10 bg-white/95 backdrop-blur lg:hidden">
                 <div class="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6">
-                    <a href="{{ route('home') }}" class="flex items-center gap-2 rounded-ainchors-button focus:outline-none focus:ring-2 focus:ring-ainchors-green">
-                        <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS Training &amp; Consulting" class="h-8 w-auto">
+                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 rounded-ainchors-button focus:outline-none focus:ring-2 focus:ring-ainchors-green">
+                        <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS" class="h-8 w-auto">
                         <span class="border-l border-ainchors-navy/15 pl-2 text-xs font-bold uppercase tracking-[0.14em] text-ainchors-navy">Admin</span>
                     </a>
                     <button type="button" @click="navigationOpen = ! navigationOpen" :aria-expanded="navigationOpen.toString()" aria-controls="admin-mobile-navigation" class="inline-flex h-10 w-10 items-center justify-center rounded-ainchors-button border border-ainchors-navy/15 bg-white text-ainchors-navy transition hover:border-ainchors-green hover:text-ainchors-green focus:outline-none focus:ring-2 focus:ring-ainchors-green">
@@ -100,25 +126,30 @@
                     </button>
                 </div>
 
-                <nav id="admin-mobile-navigation" x-cloak x-show="navigationOpen" x-transition.origin.top class="border-t border-ainchors-navy/10 bg-white px-4 py-3 shadow-lg" aria-label="Admin navigation">
-                    <div class="grid gap-1 sm:grid-cols-2">
-                        @foreach ($navigation as $item)
-                            @if (\Illuminate\Support\Facades\Route::has($item['route']))
-                                <a href="{{ route($item['route']) }}" @click="navigationOpen = false" @class([
-                                    'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green',
-                                    'bg-ainchors-green-hero text-ainchors-navy' => request()->routeIs($item['active']),
-                                    'text-ainchors-grey-dark hover:bg-slate-100 hover:text-ainchors-navy' => ! request()->routeIs($item['active']),
-                                ])>
-                                    @include('admin.partials.navigation-icon', ['icon' => $item['icon']])
-                                    {{ $item['label'] }}
-                                </a>
-                            @endif
-                        @endforeach
-                    </div>
+                <nav id="admin-mobile-navigation" x-cloak x-show="navigationOpen" x-transition.origin.top class="max-h-[75vh] overflow-y-auto border-t border-ainchors-navy/10 bg-white px-4 py-3 shadow-lg" aria-label="Admin navigation">
+                    @foreach ($navigationSections as $section)
+                        <div @class(['mt-3 border-t border-ainchors-navy/10 pt-3' => ! $loop->first])>
+                            <p class="px-3 pb-1 text-[0.625rem] font-bold uppercase tracking-[0.14em] text-ainchors-grey-light">{{ $section['label'] }}</p>
+                            <div class="grid gap-1 sm:grid-cols-2">
+                                @foreach ($section['items'] as $item)
+                                    @if (\Illuminate\Support\Facades\Route::has($item['route']))
+                                        <a href="{{ route($item['route']) }}" @click="navigationOpen = false" @class([
+                                            'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green',
+                                            'bg-ainchors-green-hero text-ainchors-navy' => request()->routeIs($item['active']),
+                                            'text-ainchors-grey-dark hover:bg-slate-100 hover:text-ainchors-navy' => ! request()->routeIs($item['active']),
+                                        ])>
+                                            @include('admin.partials.navigation-icon', ['icon' => $item['icon']])
+                                            {{ $item['label'] }}
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+
                     <div class="mt-3 grid gap-1 border-t border-ainchors-navy/10 pt-3 sm:grid-cols-2">
                         <span aria-disabled="true" class="flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold text-ainchors-grey-light">@include('admin.partials.navigation-icon', ['icon' => 'analytics']) Analytics <span class="ml-auto text-[0.625rem] uppercase tracking-[0.1em]">Later</span></span>
                         <span aria-disabled="true" class="flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold text-ainchors-grey-light">@include('admin.partials.navigation-icon', ['icon' => 'seo']) SEO analysis <span class="ml-auto text-[0.625rem] uppercase tracking-[0.1em]">Later</span></span>
-                        <a href="{{ route('home') }}" class="flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold text-ainchors-grey-dark hover:bg-slate-100 hover:text-ainchors-navy">@include('admin.partials.navigation-icon', ['icon' => 'website']) Back to website</a>
                         <form method="POST" action="{{ route('logout') }}">@csrf <button type="submit" class="flex w-full items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-left text-sm font-semibold text-ainchors-grey-dark hover:bg-slate-100 hover:text-ainchors-navy">@include('admin.partials.navigation-icon', ['icon' => 'logout']) Log out</button></form>
                     </div>
                 </nav>
