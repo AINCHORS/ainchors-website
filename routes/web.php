@@ -4,12 +4,15 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Admin\AuditLogController as AdminAuditLogController;
+use App\Http\Controllers\Admin\ConsultationController as AdminConsultationController;
 use App\Http\Controllers\Admin\CourseContentController as AdminCourseContentController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
 use App\Http\Controllers\Admin\JobApplicationController as AdminJobApplicationController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\PackageMembershipController as AdminPackageMembershipController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
@@ -64,7 +67,6 @@ Route::get('/join-us/apply', [JobApplicationController::class, 'create'])->name(
 Route::post('/join-us/apply', [JobApplicationController::class, 'store'])->name('job-applications.store');
 Route::get('/join-us/application-success', [JobApplicationController::class, 'success'])->name('job-applications.success');
 
-// Legacy booking URLs are retained only as local compatibility redirects.
 Route::redirect('/boooking-page', '/consulting-gov/booking', 301)->name('consulting.government.booking.legacy');
 Route::redirect('/booking-page', '/consulting-gov/booking', 301)->name('consulting.government.booking.legacy-alias');
 Route::get('/consulting-gov/booking', [GovernmentBookingController::class, 'create'])->name('consulting.government.booking');
@@ -119,6 +121,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
     Route::match(['put', 'patch'], '/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
     Route::patch('/products/{product}/status', [AdminProductController::class, 'updateStatus'])->name('products.status');
+    Route::post('/products/{product}/package-courses', [AdminPackageMembershipController::class, 'store'])->name('package-members.store');
+    Route::patch('/products/{product}/package-courses/reorder', [AdminPackageMembershipController::class, 'reorder'])->name('package-members.reorder');
+    Route::delete('/products/{product}/package-courses/{course}', [AdminPackageMembershipController::class, 'destroy'])->name('package-members.destroy');
 
     Route::get('/course-content', [AdminCourseContentController::class, 'index'])->name('course-content.index');
     Route::get('/course-content/create', [AdminCourseContentController::class, 'create'])->name('course-content.create');
@@ -143,6 +148,13 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::get('/contact-submissions', [AdminLeadController::class, 'index'])->name('leads.index');
     Route::get('/contact-submissions/{lead}', [AdminLeadController::class, 'show'])->name('leads.show');
     Route::match(['put', 'patch'], '/contact-submissions/{lead}', [AdminLeadController::class, 'update'])->name('leads.update');
+
+    Route::get('/consultations', [AdminConsultationController::class, 'index'])->name('consultations.index');
+    Route::get('/consultations/{consultation}', [AdminConsultationController::class, 'show'])->name('consultations.show');
+    Route::match(['put', 'patch'], '/consultations/{consultation}', [AdminConsultationController::class, 'update'])->name('consultations.update');
+
+    Route::get('/audit-log', [AdminAuditLogController::class, 'index'])->name('audit-log.index');
+    Route::get('/audit-log/{auditLog}', [AdminAuditLogController::class, 'show'])->name('audit-log.show');
 
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
     Route::match(['put', 'patch'], '/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
