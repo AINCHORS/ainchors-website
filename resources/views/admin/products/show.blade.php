@@ -57,6 +57,7 @@
             @error('package')<p class="mt-4 rounded-ainchors-button bg-red-50 px-4 py-3 text-sm text-red-700">{{ $message }}</p>@enderror
             @error('course_id')<p class="mt-4 rounded-ainchors-button bg-red-50 px-4 py-3 text-sm text-red-700">{{ $message }}</p>@enderror
             @error('positions')<p class="mt-4 rounded-ainchors-button bg-red-50 px-4 py-3 text-sm text-red-700">{{ $message }}</p>@enderror
+            @if ($errors->has('positions.*'))<p class="mt-4 rounded-ainchors-button bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first('positions.*') }}</p>@endif
 
             <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
                 <div>
@@ -87,7 +88,7 @@
                             @csrf
                             @method('PATCH')
                             <p class="text-sm font-semibold text-ainchors-navy">Reorder package</p>
-                            <p class="mt-1 text-xs leading-relaxed text-ainchors-grey-dark">Enter positions; ties are normalized deterministically.</p>
+                            <p class="mt-1 text-xs leading-relaxed text-ainchors-grey-dark">Enter a unique position for every course. Saved positions are normalized to a continuous order.</p>
                             <div class="mt-4 grid gap-3 sm:grid-cols-2">
                                 @foreach ($bundleRelations as $relation)
                                     <label class="flex items-center justify-between gap-3 rounded-ainchors-button bg-white px-3 py-2 text-sm"><span class="min-w-0 truncate font-semibold text-ainchors-navy">{{ $relation->childProduct?->name ?? 'Course '.$relation->child_product_id }}</span><input name="positions[{{ $relation->child_product_id }}]" type="number" min="1" max="9999" value="{{ old('positions.'.$relation->child_product_id, $relation->sort_order) }}" required class="w-20 rounded-ainchors-button border border-ainchors-grey-light/45 px-2.5 py-1.5 text-sm focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25"></label>
