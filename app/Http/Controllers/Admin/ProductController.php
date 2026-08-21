@@ -107,6 +107,7 @@ class ProductController extends Controller
     {
         $data = $this->validatedProductData($request, $product);
         $this->assertTypeAndSlugChangesAreSafe($product, $data);
+        $this->assertCourseDeactivationIsSafe($product, $data['status']);
         $this->assertProductCanBeActivated($data['type'], $data['status'], $product);
 
         /** @var \App\Models\User $admin */
@@ -141,6 +142,8 @@ class ProductController extends Controller
         $data = $request->validate([
             'status' => ['required', Rule::in(['draft', 'active', 'inactive'])],
         ]);
+
+        $this->assertCourseDeactivationIsSafe($product, $data['status']);
         $this->assertProductCanBeActivated($product->type, $data['status'], $product);
 
         /** @var \App\Models\User $admin */
@@ -207,6 +210,26 @@ class ProductController extends Controller
         if ($product->isCourse() && $product->slug !== $data['slug'] && $product->courseContent()->exists()) {
             throw ValidationException::withMessages([
                 'slug' => 'A course slug cannot change after protected course content is configured.',
+            ]);
+        }
+    }
+
+    private function assertCourseDeactivationIsSafe(Product $product, string $newStatus): void
+    {
+        if (! $product->isCourse() || $product->status !== 'active' || $newStatus === 'active') {
+            return;
+        }
+
+        $activeParentPackageExists = $product->parentRelations()
+            ->where('relation_type', 'bundle_item')
+            ->whereHas('parentProduct', fn ($query) => $query
+                ->where('type', 'course_package')
+                ->where('status', 'active'))
+            ->exists();
+
+        if ($activeParentPackageExists) {
+            throw ValidationException::withMessages([
+                'status' => 'Deactivate the active package containing this course before deactivating the course.',
             ]);
         }
     }
