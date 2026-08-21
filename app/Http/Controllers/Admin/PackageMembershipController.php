@@ -73,7 +73,7 @@ class PackageMembershipController extends Controller
         $this->assertPackage($product);
         $data = $request->validate([
             'positions' => ['required', 'array', 'min:1'],
-            'positions.*' => ['required', 'integer', 'min:1', 'max:9999'],
+            'positions.*' => ['required', 'integer', 'min:1', 'max:9999', 'distinct'],
         ]);
 
         $relations = ProductRelation::query()
