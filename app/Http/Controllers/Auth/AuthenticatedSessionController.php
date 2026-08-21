@@ -30,7 +30,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         $user = $request->user();
-        $user->forceFill(['last_login_at' => now()])->save();
 
         if ($user->isAdmin() && ! $user->isAuthorizedAdmin()) {
             Auth::guard('web')->logout();
@@ -40,6 +39,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('login')
                 ->withErrors(['email' => 'This administrator account is not authorized for the AINCHORS administration portal.']);
         }
+
+        $user->forceFill(['last_login_at' => now()])->save();
 
         if ($user->isAuthorizedAdmin()) {
             return redirect($this->adminDestination($request));
