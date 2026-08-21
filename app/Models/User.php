@@ -30,6 +30,15 @@ class User extends Authenticatable
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $user): void {
+            // Database unique index: one admin is represented by 1; every
+            // ordinary user is NULL, which may repeat in a unique index.
+            $user->admin_singleton = $user->role === 'admin' ? 1 : null;
+        });
+    }
+
     public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function orders(): HasMany { return $this->hasMany(Order::class); }
     public function workflowAudits(): HasMany { return $this->hasMany(WorkflowAudit::class); }
@@ -42,4 +51,12 @@ class User extends Authenticatable
     public function activityEvents(): HasMany { return $this->hasMany(ActivityEvent::class); }
     public function privacyConsents(): HasMany { return $this->hasMany(PrivacyConsent::class); }
     public function linkedVisitors(): HasMany { return $this->hasMany(Visitor::class, 'linked_user_id'); }
+    public function reviewedJobApplications(): HasMany { return $this->hasMany(JobApplication::class, 'reviewed_by'); }
+    public function jobApplicationStatusHistories(): HasMany { return $this->hasMany(JobApplicationStatusHistory::class, 'changed_by'); }
+    public function adminAuditLogs(): HasMany { return $this->hasMany(AdminAuditLog::class, 'admin_user_id'); }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 }

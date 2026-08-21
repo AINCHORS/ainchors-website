@@ -17,7 +17,7 @@ listed below unchanged.
 | `consulting/private-sector/` | `/consulting-private` |
 | `support/faqs/` | `/faqs` |
 | `support/contact/` | `/contact-us` |
-| `support/careers/` | `/hiring-page` |
+| `support/careers/` | `/join-us` |
 | `commerce/events/` | `/events` |
 | `commerce/checkout/` | checkout routes |
 | `legal/` | terms and privacy routes |

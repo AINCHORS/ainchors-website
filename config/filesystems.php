@@ -38,6 +38,16 @@ return [
             'report' => false,
         ],
 
+        // Resume files must never be exposed through public/storage or a
+        // guessable URL. Only an authorised Admin download route will use
+        // this private disk in the later review phase.
+        'job-applications' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/job-applications'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

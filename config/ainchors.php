@@ -26,7 +26,7 @@ return [
             ],
         ],
         ['label' => 'FAQ’s', 'url' => '/faqs'],
-        ['label' => 'Join Us', 'url' => '/hiring-page'],
+        ['label' => 'Join Us', 'url' => '/join-us'],
         ['label' => 'Contact us', 'url' => '/contact-us', 'featured' => true],
     ],
     'clients' => [
@@ -98,7 +98,7 @@ return [
         'faqs',
         'financialliteracymastery',
         'fondy-foong',
-        'hiring-page',
+        'join-us',
         'individual-aiprompt',
         'individualcbdc',
         'individualepayment',

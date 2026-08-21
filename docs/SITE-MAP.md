@@ -12,7 +12,7 @@
   - Public/Government Sector: `/consulting-gov`
   - Private Sector: `/consulting-private`
 - FAQ’s: `/faqs`
-- Join Us: `/hiring-page`
+- Join Us: `/join-us`
 - Contact us: `/contact-us`
 
 Additional course, event, checkout and policy routes are retained by the legacy bridge.

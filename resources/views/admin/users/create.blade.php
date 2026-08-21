@@ -1,0 +1,19 @@
+@extends('layouts.admin')
+
+@section('title', 'Add User | AINCHORS Admin')
+
+@section('content')
+    <div class="mx-auto max-w-3xl">
+        <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-ainchors-green transition hover:text-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>All users</a>
+        <div class="mt-5 rounded-ainchors-card border border-ainchors-navy/10 bg-white p-6 shadow-sm sm:p-8">
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-ainchors-green">Account management</p>
+            <h1 class="mt-2 font-heading text-3xl font-bold text-ainchors-navy">Add user</h1>
+            <p class="mt-2 text-sm leading-relaxed text-ainchors-grey-dark">Create an account with the minimum details needed for access. The temporary password is never shown after submission.</p>
+            <form method="POST" action="{{ route('admin.users.store') }}" class="mt-7 space-y-7">
+                @csrf
+                @include('admin.users.partials.fields', ['user' => null])
+                <div class="flex flex-wrap justify-end gap-3 border-t border-ainchors-navy/10 pt-6"><a href="{{ route('admin.users.index') }}" class="rounded-ainchors-button border border-ainchors-navy/15 px-4 py-2.5 text-sm font-semibold text-ainchors-grey-dark transition hover:border-ainchors-green hover:text-ainchors-green focus:outline-none focus:ring-2 focus:ring-ainchors-green">Cancel</a><button type="submit" class="rounded-ainchors-button bg-ainchors-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">Create user</button></div>
+            </form>
+        </div>
+    </div>
+@endsection

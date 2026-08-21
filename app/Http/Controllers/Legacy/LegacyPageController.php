@@ -35,6 +35,7 @@ class LegacyPageController extends Controller
         }
 
         $html = file_get_contents($source);
+        $html = $this->withoutExternalChatWidget($html);
         $base = rtrim(url('/'), '/');
 
         $html = str_replace([
@@ -55,6 +56,22 @@ class LegacyPageController extends Controller
             },
             $html,
         );
+
+        if ($embedded && $path === 'consulting-main') {
+            $bookingUrl = htmlspecialchars(route('consulting.government.booking'), ENT_QUOTES, 'UTF-8');
+
+            $html = preg_replace_callback(
+                '~<a\b[^>]*\baria-label\s*=\s*(["\'])Book\s+Now\s*\1[^>]*>~i',
+                static function (array $match) use ($bookingUrl): string {
+                    return preg_replace(
+                        '~\bhref\s*=\s*(["\']).*?\1~i',
+                        'href="'.$bookingUrl.'"',
+                        $match[0],
+                    ) ?? $match[0];
+                },
+                $html,
+            ) ?? $html;
+        }
 
         // Internal links from embedded legacy pages navigate the parent Laravel
         // page. Social and WhatsApp destinations retain their own behavior.
@@ -91,10 +108,34 @@ class LegacyPageController extends Controller
                 $injection .= '<script>document.addEventListener("DOMContentLoaded",function(){const endpoint='.$endpoint.',token='.$token.';document.querySelectorAll("form").forEach(function(form){form.addEventListener("submit",async function(event){event.preventDefault();event.stopImmediatePropagation();const field=function(selector){return form.querySelector(selector)?.value?.trim()||""};const payload={full_name:field("[name=full_name]")||field("[name=last_name]"),email:field("[name=email]"),phone:field("[name=phone]"),country:field("[name=country]"),message:field("[data-q=comment]"),source:"contact_page"};try{const response=await fetch(endpoint,{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/json","X-CSRF-TOKEN":token},body:JSON.stringify(payload)});const result=await response.json();let notice=form.querySelector(".ainchors-contact-feedback");if(!notice){notice=document.createElement("p");notice.className="ainchors-contact-feedback";form.append(notice)}notice.textContent=response.ok?result.message:Object.values(result.errors||{}).flat().join(" ");notice.style.color=response.ok?"#37AD82":"#b42318"}catch(error){const notice=document.createElement("p");notice.className="ainchors-contact-feedback";notice.textContent="Unable to submit right now. Please try again.";notice.style.color="#b42318";form.append(notice)}} ,true)})});</script>';
             }
 
+            if ($path === 'join-us') {
+                $applicationUrl = json_encode(route('job-applications.create'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $injection .= '<script>document.addEventListener("DOMContentLoaded",function(){const applicationUrl='.$applicationUrl.';document.querySelectorAll("a").forEach(function(link){const label=(link.textContent||"").toLowerCase().replace(/[^a-z]/g,"");if(label==="applynow"){link.href=applicationUrl;link.target="_parent";link.removeAttribute("rel")}})});</script>';
+            }
+
+            if ($path === 'consulting-main') {
+                $bookingUrl = json_encode(route('consulting.government.booking'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $injection .= '<script>(function(){const bookingUrl='.$bookingUrl.';const isBookNow=function(element){if(!element){return false}const label=((element.getAttribute("aria-label")||element.textContent||"").toLowerCase().replace(/[^a-z]/g,""));return label==="booknow"};const updateLinks=function(){document.querySelectorAll("a").forEach(function(link){if(isBookNow(link)){if(link.getAttribute("href")!==bookingUrl){link.setAttribute("href",bookingUrl)}if(link.getAttribute("target")!=="_parent"){link.setAttribute("target","_parent")}if(link.hasAttribute("rel")){link.removeAttribute("rel")}})};document.addEventListener("click",function(event){const element=event.target instanceof Element?event.target.closest("a,button,[role=button]"):null;if(isBookNow(element)){event.preventDefault();event.stopImmediatePropagation();window.parent.location.assign(bookingUrl)}},true);window.addEventListener("load",updateLinks);new MutationObserver(updateLinks).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["href","aria-label"]})})();</script>';
+            }
+
             $injection .= '<script>document.addEventListener("DOMContentLoaded",function(){const report=function(){parent.postMessage({source:"ainchors-legacy",type:"height",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},location.origin)};new ResizeObserver(report).observe(document.body);window.addEventListener("load",report);report()})</script>';
             $html = str_replace('</head>', $injection.'</head>', $html);
         }
 
-        return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
+        return response($html)
+            ->header('Content-Type', 'text/html; charset=UTF-8')
+            ->header('Cache-Control', 'no-store, max-age=0, must-revalidate')
+            ->header('Pragma', 'no-cache');
+    }
+
+    private function withoutExternalChatWidget(string $html): string
+    {
+        $html = preg_replace(
+            '~<div\b[^>]*\bclass\s*=\s*(["\'])[^"\']*\bcustom-code-container\b[^"\']*\1[^>]*>\s*<script\b[^>]*(?:tidio|lyro)[^>]*>.*?</script>\s*</div>~is',
+            '',
+            $html,
+        ) ?? $html;
+
+        return preg_replace('~<script\b[^>]*(?:tidio|lyro)[^>]*>.*?</script>~is', '', $html) ?? $html;
     }
 }

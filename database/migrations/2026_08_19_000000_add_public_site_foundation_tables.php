@@ -26,7 +26,7 @@ return new class extends Migration
                 $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
                 $table->unsignedBigInteger('visitor_id')->nullable()->index();
                 $table->unsignedBigInteger('workflow_audit_id')->nullable()->index();
-                $table->enum('source', ['contact', 'workflow_audit', 'course', 'ai_assistant', 'other'])->default('other')->index();
+                $table->enum('source', ['contact', 'workflow_audit', 'course', 'ai_assistant', 'consulting_booking', 'other'])->default('other')->index();
                 $table->string('full_name');
                 $table->string('email')->index();
                 $table->string('phone', 50)->nullable();

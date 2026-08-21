@@ -17,7 +17,7 @@ class PublicPageController extends Controller
         'consultingGovernment' => ['slug' => 'consulting-gov', 'title' => 'Public / Government Consulting | AINCHORS'],
         'consultingPrivate' => ['slug' => 'consulting-private', 'title' => 'Private Sector Consulting | AINCHORS'],
         'faqs' => ['slug' => 'faqs', 'title' => 'FAQs | AINCHORS'],
-        'hiring' => ['slug' => 'hiring-page', 'title' => 'Join Us | AINCHORS'],
+        'hiring' => ['slug' => 'join-us', 'title' => 'Join Us | AINCHORS'],
         'contact' => ['slug' => 'contact-us', 'title' => 'Contact Us | AINCHORS'],
         'terms' => ['slug' => 'terms--conditions', 'title' => 'Terms & Conditions | AINCHORS'],
         'privacy' => ['slug' => 'privacy--policy', 'title' => 'Privacy Policy | AINCHORS'],
@@ -82,7 +82,10 @@ class PublicPageController extends Controller
     {
         return view('public.legacy-page', [
             'title' => $page['title'],
-            'legacySource' => route('legacy.embedded', ['path' => $page['slug']]),
+            'legacySource' => route('legacy.embedded', [
+                'path' => $page['slug'],
+                'v' => 'external-chat-removed-1',
+            ]),
         ]);
     }
 }

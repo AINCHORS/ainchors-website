@@ -4,6 +4,16 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Admin\CourseContentController as AdminCourseContentController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
+use App\Http\Controllers\Admin\JobApplicationController as AdminJobApplicationController;
+use App\Http\Controllers\Admin\LeadController as AdminLeadController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Commerce\CheckoutController;
 use App\Http\Controllers\Commerce\PaymentSuccessController;
 use App\Http\Controllers\Courses\CourseCatalogController;
@@ -11,7 +21,15 @@ use App\Http\Controllers\Courses\CourseLearningController;
 use App\Http\Controllers\Courses\CourseMediaController;
 use App\Http\Controllers\Courses\MyCoursesController;
 use App\Http\Controllers\Legacy\LegacyPageController;
+use App\Http\Controllers\Modules\Company\AboutController;
+use App\Http\Controllers\Modules\Company\CareersController;
+use App\Http\Controllers\Modules\Company\JobApplicationController;
+use App\Http\Controllers\Modules\Consulting\GovernmentBookingController;
 use App\Http\Controllers\Modules\HomeController;
+use App\Http\Controllers\Modules\Support\ContactController;
+use App\Http\Controllers\Modules\Support\FaqController;
+use App\Http\Controllers\Modules\Support\PrivacyController;
+use App\Http\Controllers\Modules\Support\TermsController;
 use App\Http\Controllers\Public\ContactSubmissionController;
 use App\Http\Controllers\Public\PublicPageController;
 use App\Http\Controllers\User\ProfileController;
@@ -20,20 +38,20 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 Route::redirect('/home', '/', 301)->name('home.legacy');
+Route::get('/about-us', AboutController::class)->name('about');
+Route::get('/faqs', FaqController::class)->name('faqs');
+Route::get('/join-us', CareersController::class)->name('hiring');
+Route::get('/contact-us', ContactController::class)->name('contact');
+Route::get('/terms--conditions', TermsController::class)->name('terms');
+Route::get('/privacy--policy', PrivacyController::class)->name('privacy');
 
 Route::controller(PublicPageController::class)->group(function (): void {
-    Route::get('/about-us', 'about')->name('about');
     Route::get('/trainers-profile', 'trainers')->name('trainers');
     Route::get('/testimonials', 'testimonials')->name('testimonials');
     Route::get('/success-story-of-angie', 'successStory')->name('success-story');
     Route::get('/consulting-main', 'consultingMain')->name('consulting.main');
     Route::get('/consulting-gov', 'consultingGovernment')->name('consulting.government');
     Route::get('/consulting-private', 'consultingPrivate')->name('consulting.private');
-    Route::get('/faqs', 'faqs')->name('faqs');
-    Route::get('/hiring-page', 'hiring')->name('hiring');
-    Route::get('/contact-us', 'contact')->name('contact');
-    Route::get('/terms--conditions', 'terms')->name('terms');
-    Route::get('/privacy--policy', 'privacy')->name('privacy');
     Route::get('/events', 'events')->name('events');
 });
 
@@ -41,6 +59,16 @@ Route::get('/_legacy/{path}', [LegacyPageController::class, 'embedded'])
     ->where('path', '[A-Za-z0-9\/-]+')
     ->name('legacy.embedded');
 Route::post('/contact-submissions', ContactSubmissionController::class)->name('contact.submit');
+
+Route::get('/join-us/apply', [JobApplicationController::class, 'create'])->name('job-applications.create');
+Route::post('/join-us/apply', [JobApplicationController::class, 'store'])->name('job-applications.store');
+Route::get('/join-us/application-success', [JobApplicationController::class, 'success'])->name('job-applications.success');
+
+// Legacy booking URLs are retained only as local compatibility redirects.
+Route::redirect('/boooking-page', '/consulting-gov/booking', 301)->name('consulting.government.booking.legacy');
+Route::redirect('/booking-page', '/consulting-gov/booking', 301)->name('consulting.government.booking.legacy-alias');
+Route::get('/consulting-gov/booking', [GovernmentBookingController::class, 'create'])->name('consulting.government.booking');
+Route::post('/consulting-gov/booking', [GovernmentBookingController::class, 'store'])->name('consulting.government.booking.store');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -71,6 +99,53 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/learn/{course:slug}', CourseLearningController::class)->name('learn.show');
     Route::get('/course-media/{course:slug}/video', [CourseMediaController::class, 'video'])->name('course-media.video');
     Route::get('/course-media/{course:slug}/slides', [CourseMediaController::class, 'slides'])->name('course-media.slides');
+});
+
+Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(function (): void {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
+    Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+    Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
+    Route::match(['put', 'patch'], '/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::patch('/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('users.status');
+
+    Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{product}', [AdminProductController::class, 'show'])->name('products.show');
+    Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
+    Route::match(['put', 'patch'], '/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
+    Route::patch('/products/{product}/status', [AdminProductController::class, 'updateStatus'])->name('products.status');
+
+    Route::get('/course-content', [AdminCourseContentController::class, 'index'])->name('course-content.index');
+    Route::get('/course-content/create', [AdminCourseContentController::class, 'create'])->name('course-content.create');
+    Route::post('/course-content', [AdminCourseContentController::class, 'store'])->name('course-content.store');
+    Route::get('/course-content/{courseContent}/edit', [AdminCourseContentController::class, 'edit'])->name('course-content.edit');
+    Route::match(['put', 'patch'], '/course-content/{courseContent}', [AdminCourseContentController::class, 'update'])->name('course-content.update');
+
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
+
+    Route::get('/enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
+    Route::post('/enrollments', [AdminEnrollmentController::class, 'store'])->name('enrollments.store');
+    Route::patch('/enrollments/{enrollment}/revoke', [AdminEnrollmentController::class, 'revoke'])->name('enrollments.revoke');
+
+    Route::get('/job-applications', [AdminJobApplicationController::class, 'index'])->name('job-applications.index');
+    Route::get('/job-applications/{jobApplication}', [AdminJobApplicationController::class, 'show'])->name('job-applications.show');
+    Route::match(['put', 'patch'], '/job-applications/{jobApplication}', [AdminJobApplicationController::class, 'update'])->name('job-applications.update');
+    Route::get('/job-applications/{jobApplication}/resume', [AdminJobApplicationController::class, 'resume'])->name('job-applications.resume');
+
+    Route::get('/contact-submissions', [AdminLeadController::class, 'index'])->name('leads.index');
+    Route::get('/contact-submissions/{lead}', [AdminLeadController::class, 'show'])->name('leads.show');
+    Route::match(['put', 'patch'], '/contact-submissions/{lead}', [AdminLeadController::class, 'update'])->name('leads.update');
+
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings.index');
+    Route::match(['put', 'patch'], '/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
 });
 
 $legacyCourseRedirects = [

@@ -36,7 +36,7 @@ Existing working domains:
 | `/consulting-main` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Exists through catch-all only. |
 | `/consulting-gov` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Exists through catch-all only. |
 | `/consulting-private` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Exists through catch-all only. |
-| `/faqs`, `/hiring-page`, `/contact-us` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Exist through catch-all only; contact form is not an application submission. |
+| `/faqs`, `/join-us`, `/contact-us` | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Contact form is not an application submission. |
 | `/success-story-of-angie`, terms, privacy, events | `legacy.page` | Legacy raw HTML | No | No | Legacy | Legacy | Useful legacy compatibility pages without named canonical routes. |
 | `/login`, `/register` | `login`, `register` | Native auth views | Guest | No | Native | Full public shell | No password visibility controls, consent checkbox, reset flow, rate limit, or auth-focused shell. |
 | `/my-courses` | `my-courses` | Native enrollment view | Yes | No | Native | Full public shell | Works and remains protected. |
