@@ -47,9 +47,6 @@ class UserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        // Newly provisioned accounts are active unless an explicit permitted
-        // status is supplied. This keeps the minimal create form usable while
-        // retaining controlled status management as a separate action.
         if (! $request->has('status')) {
             $request->merge(['status' => 'active']);
         }
@@ -107,8 +104,6 @@ class UserController extends Controller
             ])
             ->findOrFail($user->getKey());
 
-        // Activity events are intentionally not queried until the first-party
-        // analytics phase has created a real event stream.
         $recentActivity = collect();
 
         return view('admin.users.show', compact('user', 'recentActivity'));
@@ -128,6 +123,8 @@ class UserController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user)],
             'role' => ['prohibited'],
         ]);
+
+        $this->assertAdminIdentityChangeIsSafe($user, $data['email']);
 
         /** @var User $admin */
         $admin = $request->user();
@@ -184,6 +181,21 @@ class UserController extends Controller
             ->with('success', 'User status updated.');
     }
 
+    private function assertAdminIdentityChangeIsSafe(User $user, string $newEmail): void
+    {
+        if (! $user->isAdmin()) {
+            return;
+        }
+
+        $configuredEmail = strtolower(trim((string) config('ainchors.admin.email', '')));
+
+        if ($configuredEmail === '' || strtolower(trim($newEmail)) !== $configuredEmail) {
+            throw ValidationException::withMessages([
+                'email' => 'The administrator email is controlled by AINCHORS_ADMIN_EMAIL and cannot be changed here.',
+            ]);
+        }
+    }
+
     private function assertStatusChangeIsSafe(User $admin, User $subject, string $newStatus): void
     {
         if ($admin->is($subject) && $newStatus !== 'active') {
@@ -192,11 +204,26 @@ class UserController extends Controller
             ]);
         }
 
-        if ($subject->role === 'admin' && $subject->status === 'active' && $newStatus !== 'active' && $this->activeAdminCount() <= 1) {
+        if ($subject->isAdmin() && $subject->status === 'active' && $newStatus !== 'active' && $this->activeAdminCount() <= 1) {
             throw ValidationException::withMessages([
-                'status' => 'At least one active administrator must remain.',
+                'status' => 'The configured administrator account must remain active.',
             ]);
         }
+    }
+
+    private function activeAdminCount(): int
+    {
+        $configuredEmail = strtolower(trim((string) config('ainchors.admin.email', '')));
+
+        if ($configuredEmail === '') {
+            return 0;
+        }
+
+        return User::query()
+            ->where('role', 'admin')
+            ->where('status', 'active')
+            ->whereRaw('LOWER(email) = ?', [$configuredEmail])
+            ->count();
     }
 
     /** @return array<string, int|string> */
