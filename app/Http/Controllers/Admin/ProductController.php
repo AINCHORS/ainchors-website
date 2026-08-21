@@ -48,7 +48,7 @@ class ProductController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validatedProductData($request);
-        $this->assertCourseCanBeActivated($data['type'], $data['status']);
+        $this->assertProductCanBeActivated($data['type'], $data['status']);
 
         /** @var \App\Models\User $admin */
         $admin = $request->user();
@@ -62,7 +62,7 @@ class ProductController extends Controller
         });
 
         return redirect()->route('admin.products.show', $product)
-            ->with('success', 'Product created. Course products remain drafts until protected course metadata is configured.');
+            ->with('success', 'Product created. Course products and packages must be fully configured before activation.');
     }
 
     public function show(Product $product): View
@@ -71,12 +71,27 @@ class ProductController extends Controller
             ->withCount(['enrollments', 'orderItems'])
             ->with([
                 ...$this->safeCourseContentRelation(),
-                'childRelations.childProduct:id,name,slug,type,status',
+                'childRelations.childProduct:id,name,slug,sku,type,status',
                 'parentRelations.parentProduct:id,name,slug,type,status',
             ])
             ->findOrFail($product->getKey());
 
-        return view('admin.products.show', compact('product'));
+        $availableCourses = collect();
+
+        if ($product->isPackage()) {
+            $includedIds = $product->childRelations
+                ->where('relation_type', 'bundle_item')
+                ->pluck('child_product_id');
+
+            $availableCourses = Product::query()
+                ->select(['id', 'name', 'slug', 'sku', 'status'])
+                ->where('type', 'course')
+                ->whereNotIn('id', $includedIds)
+                ->orderBy('name')
+                ->get();
+        }
+
+        return view('admin.products.show', compact('product', 'availableCourses'));
     }
 
     public function edit(Product $product): View
@@ -92,7 +107,7 @@ class ProductController extends Controller
     {
         $data = $this->validatedProductData($request, $product);
         $this->assertTypeAndSlugChangesAreSafe($product, $data);
-        $this->assertCourseCanBeActivated($data['type'], $data['status'], $product);
+        $this->assertProductCanBeActivated($data['type'], $data['status'], $product);
 
         /** @var \App\Models\User $admin */
         $admin = $request->user();
@@ -126,7 +141,7 @@ class ProductController extends Controller
         $data = $request->validate([
             'status' => ['required', Rule::in(['draft', 'active', 'inactive'])],
         ]);
-        $this->assertCourseCanBeActivated($product->type, $data['status'], $product);
+        $this->assertProductCanBeActivated($product->type, $data['status'], $product);
 
         /** @var \App\Models\User $admin */
         $admin = $request->user();
@@ -152,9 +167,6 @@ class ProductController extends Controller
     {
         $request->merge(['currency' => strtoupper((string) $request->input('currency', 'USD'))]);
 
-        // Status is intentionally controlled through the dedicated status
-        // action on an existing product; preserve it when editing catalogue
-        // copy and pricing through the normal edit form.
         if ($product && ! $request->has('status')) {
             $request->merge(['status' => $product->status]);
         }
@@ -184,9 +196,11 @@ class ProductController extends Controller
             $product->courseContent()->exists()
             || $product->orderItems()->exists()
             || $product->enrollments()->exists()
+            || $product->childRelations()->exists()
+            || $product->parentRelations()->exists()
         )) {
             throw ValidationException::withMessages([
-                'type' => 'A product with course content, orders, or enrollments cannot change type.',
+                'type' => 'A product with course content, package relations, orders, or enrollments cannot change type.',
             ]);
         }
 
@@ -197,19 +211,49 @@ class ProductController extends Controller
         }
     }
 
-    private function assertCourseCanBeActivated(string $type, string $status, ?Product $product = null): void
+    private function assertProductCanBeActivated(string $type, string $status, ?Product $product = null): void
     {
-        if ($type !== 'course' || $status !== 'active') {
+        if ($status !== 'active') {
             return;
         }
 
-        $hasConfiguredVideo = $product
-            && $product->courseContent()->whereNotNull('video_url')->where('video_url', '!=', '')->exists();
+        if ($type === 'course') {
+            $hasConfiguredVideo = $product
+                && $product->courseContent()->whereNotNull('video_url')->where('video_url', '!=', '')->exists();
 
-        if (! $hasConfiguredVideo) {
-            throw ValidationException::withMessages([
-                'status' => 'A course can only be active after protected course video metadata has been configured.',
-            ]);
+            if (! $hasConfiguredVideo) {
+                throw ValidationException::withMessages([
+                    'status' => 'A course can only be active after protected course video metadata has been configured.',
+                ]);
+            }
+        }
+
+        if ($type === 'course_package') {
+            if (! $product) {
+                throw ValidationException::withMessages([
+                    'status' => 'Create a course package as draft, add its courses, then activate it.',
+                ]);
+            }
+
+            $members = $product->bundleProducts()->get();
+
+            if ($members->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'status' => 'A course package must contain at least one course before activation.',
+                ]);
+            }
+
+            $invalidMember = $members->first(function (Product $course): bool {
+                return ! $course->isCourse()
+                    || $course->status !== 'active'
+                    || ! $course->courseContent()->whereNotNull('video_url')->where('video_url', '!=', '')->exists();
+            });
+
+            if ($invalidMember) {
+                throw ValidationException::withMessages([
+                    'status' => 'Every course in an active package must be active and have protected course content configured.',
+                ]);
+            }
         }
     }
 
