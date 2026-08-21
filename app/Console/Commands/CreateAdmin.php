@@ -142,9 +142,13 @@ class CreateAdmin extends Command
         }
 
         if ($user->isAdmin()) {
-            $this->error('The existing administrator record is not authorized by the configured administrator identity.');
+            DB::transaction(function () use ($user): void {
+                $user->forceFill(['status' => 'active'])->save();
+            });
 
-            return self::FAILURE;
+            $this->info("Administrator {$user->email} has been reactivated.");
+
+            return self::SUCCESS;
         }
 
         if (User::query()->where('role', 'admin')->exists()) {
