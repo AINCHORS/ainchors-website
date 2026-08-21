@@ -10,9 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsAdmin
 {
     /**
-     * Reject every unauthenticated or non-administrator request with a 403.
-     * Routes using this alias should also apply Laravel's `auth` middleware
-     * when a login redirect is the desired guest experience.
+     * Routes using this alias should also apply Laravel's `auth` middleware so
+     * guests are redirected to the shared website login page first.
      *
      * @param  Closure(Request): Response  $next
      */
@@ -20,7 +19,7 @@ class EnsureUserIsAdmin
     {
         $user = $request->user();
 
-        abort_unless($user instanceof User && $user->isAdmin(), 403);
+        abort_unless($user instanceof User && $user->isAuthorizedAdmin(), 403);
 
         return $next($request);
     }
