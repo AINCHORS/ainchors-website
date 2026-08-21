@@ -60,8 +60,6 @@ class EnrollmentController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        // These select lists deliberately expose only currently usable course
-        // products and active accounts for an administrator's manual grant.
         $users = User::query()
             ->select(['id', 'full_name', 'email'])
             ->where('status', 'active')
@@ -84,6 +82,7 @@ class EnrollmentController extends Controller
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'expires_at' => ['nullable', 'date', 'after_or_equal:today'],
+            'reason' => ['required', 'string', 'max:500'],
         ]);
 
         $user = User::query()->findOrFail($data['user_id']);
@@ -101,19 +100,18 @@ class EnrollmentController extends Controller
             ? Carbon::parse($data['expires_at'])->endOfDay()
             : null;
         $expiryChanged = $expiresAt !== null && (! $existing?->expires_at || ! $existing->expires_at->equalTo($expiresAt));
+        $reason = trim($data['reason']);
 
-        /** @var Enrollment $enrollment */
-        $enrollment = DB::transaction(function () use ($admin, $user, $course, $existing, $wasAlreadyActive, $expiresAt, $expiryChanged): Enrollment {
+        DB::transaction(function () use ($admin, $user, $course, $existing, $wasAlreadyActive, $expiresAt, $expiryChanged, $reason): void {
             $before = $existing ? $this->auditData($existing) : [];
             $enrollment = $this->enrollments->grantManually($user, $course, $expiresAt);
+            $after = [...$this->auditData($enrollment), 'manual_reason' => $reason];
 
             if (! $wasAlreadyActive) {
-                $this->audit->record($admin, 'ENROLLMENT_GRANTED', $enrollment, $before, $this->auditData($enrollment));
+                $this->audit->record($admin, 'ENROLLMENT_GRANTED', $enrollment, $before, $after);
             } elseif ($expiryChanged) {
-                $this->audit->record($admin, 'ENROLLMENT_EXPIRY_UPDATED', $enrollment, $before, $this->auditData($enrollment));
+                $this->audit->record($admin, 'ENROLLMENT_EXPIRY_UPDATED', $enrollment, $before, $after);
             }
-
-            return $enrollment;
         });
 
         return redirect()->route('admin.enrollments.index')
@@ -124,16 +122,27 @@ class EnrollmentController extends Controller
 
     public function revoke(Request $request, Enrollment $enrollment): RedirectResponse
     {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
         /** @var User $admin */
         $admin = $request->user();
         $wasRevoked = $enrollment->status === 'revoked';
+        $reason = trim($data['reason']);
 
-        DB::transaction(function () use ($admin, $enrollment, $wasRevoked): void {
+        DB::transaction(function () use ($admin, $enrollment, $wasRevoked, $reason): void {
             $before = $this->auditData($enrollment);
             $this->enrollments->revoke($enrollment);
 
             if (! $wasRevoked) {
-                $this->audit->record($admin, 'ENROLLMENT_REVOKED', $enrollment, $before, $this->auditData($enrollment));
+                $this->audit->record(
+                    $admin,
+                    'ENROLLMENT_REVOKED',
+                    $enrollment,
+                    $before,
+                    [...$this->auditData($enrollment), 'manual_reason' => $reason],
+                );
             }
         });
 
