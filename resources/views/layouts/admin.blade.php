@@ -8,7 +8,7 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body x-data="{ navigationOpen: false }" class="min-h-screen bg-slate-100 font-sans text-ainchors-navy antialiased">
+<body x-data="{ navigationOpen: false }" class="min-h-screen overflow-x-hidden bg-[#f2f7f5] font-sans text-ainchors-navy antialiased">
     <a href="#main-content" class="skip-link">Skip to content</a>
 
     @php
@@ -58,11 +58,11 @@
     @endphp
 
     <div class="min-h-screen lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)]">
-        <aside class="hidden min-h-screen border-r border-ainchors-navy/10 bg-ainchors-navy text-white lg:sticky lg:top-0 lg:flex lg:max-h-screen lg:flex-col">
-            <div class="border-b border-white/10 px-6 py-6">
-                <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-3 rounded-ainchors-button focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy">
-                    <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS" class="h-10 w-auto brightness-0 invert">
-                    <span class="border-l border-white/20 pl-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/75">Admin</span>
+        <aside class="hidden min-h-screen border-r border-ainchors-green/20 bg-[#123f3a] text-white lg:sticky lg:top-0 lg:flex lg:max-h-screen lg:flex-col">
+            <div class="border-b border-white/10 px-5 py-5">
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-ainchors-button bg-white p-3 shadow-sm ring-1 ring-white/20 focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-[#123f3a]">
+                    <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS" class="h-auto min-w-0 flex-1 object-contain">
+                    <span class="shrink-0 border-l border-ainchors-navy/15 pl-3 text-[0.6875rem] font-bold uppercase tracking-[0.16em] text-[#123f3a]">Admin</span>
                 </a>
             </div>
 
@@ -74,9 +74,9 @@
                             @foreach ($section['items'] as $item)
                                 @if (\Illuminate\Support\Facades\Route::has($item['route']))
                                     <a href="{{ route($item['route']) }}" @class([
-                                        'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy',
-                                        'bg-white/12 text-white shadow-sm' => request()->routeIs($item['active']),
-                                        'text-white/75 hover:bg-white/8 hover:text-white' => ! request()->routeIs($item['active']),
+                                        'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-[#123f3a]',
+                                        'bg-ainchors-green text-white shadow-sm' => request()->routeIs($item['active']),
+                                        'text-white/75 hover:bg-ainchors-green/15 hover:text-white' => ! request()->routeIs($item['active']),
                                     ])>
                                         @include('admin.partials.navigation-icon', ['icon' => $item['icon']])
                                         <span>{{ $item['label'] }}</span>
@@ -104,7 +104,7 @@
             <div class="border-t border-white/10 p-4">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="flex w-full items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-left text-sm font-semibold text-white/75 transition hover:bg-white/8 hover:text-white focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-ainchors-navy">
+                    <button type="submit" class="flex w-full items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-left text-sm font-semibold text-white/75 transition hover:bg-ainchors-green/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2 focus:ring-offset-[#123f3a]">
                         @include('admin.partials.navigation-icon', ['icon' => 'logout'])
                         Log out
                     </button>
@@ -113,10 +113,10 @@
         </aside>
 
         <div class="min-w-0">
-            <header class="sticky top-0 z-40 border-b border-ainchors-navy/10 bg-white/95 backdrop-blur lg:hidden">
+            <header class="sticky top-0 z-40 border-b border-ainchors-green/20 bg-white/95 backdrop-blur lg:hidden">
                 <div class="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6">
                     <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 rounded-ainchors-button focus:outline-none focus:ring-2 focus:ring-ainchors-green">
-                        <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS" class="h-8 w-auto">
+                        <img src="{{ asset('assets/logo.webp') }}" alt="AINCHORS" class="h-8 w-auto max-w-[8rem] object-contain">
                         <span class="border-l border-ainchors-navy/15 pl-2 text-xs font-bold uppercase tracking-[0.14em] text-ainchors-navy">Admin</span>
                     </a>
                     <button type="button" @click="navigationOpen = ! navigationOpen" :aria-expanded="navigationOpen.toString()" aria-controls="admin-mobile-navigation" class="inline-flex h-10 w-10 items-center justify-center rounded-ainchors-button border border-ainchors-navy/15 bg-white text-ainchors-navy transition hover:border-ainchors-green hover:text-ainchors-green focus:outline-none focus:ring-2 focus:ring-ainchors-green">
@@ -135,8 +135,8 @@
                                     @if (\Illuminate\Support\Facades\Route::has($item['route']))
                                         <a href="{{ route($item['route']) }}" @click="navigationOpen = false" @class([
                                             'flex items-center gap-3 rounded-ainchors-button px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-ainchors-green',
-                                            'bg-ainchors-green-hero text-ainchors-navy' => request()->routeIs($item['active']),
-                                            'text-ainchors-grey-dark hover:bg-slate-100 hover:text-ainchors-navy' => ! request()->routeIs($item['active']),
+                                            'bg-ainchors-green text-white' => request()->routeIs($item['active']),
+                                            'text-ainchors-grey-dark hover:bg-ainchors-green-hero hover:text-ainchors-navy' => ! request()->routeIs($item['active']),
                                         ])>
                                             @include('admin.partials.navigation-icon', ['icon' => $item['icon']])
                                             {{ $item['label'] }}

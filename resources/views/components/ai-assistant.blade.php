@@ -78,7 +78,7 @@
         aria-controls="ai-assistant-panel"
         class="fixed bottom-6 right-6 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-ainchors-green text-ainchors-white shadow-lg transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2"
     >
-        <svg x-show="!open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 20l1.3-3.9C3.5 14.9 3 13.5 3 12c0-4.4 3.6-8 8-8s8 3.6 8 8z"/></svg>
+        <svg x-show="!open" class="absolute inset-0 m-auto h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.4-4 8-9 8-1.2 0-2.4-.2-3.4-.6L3 20l1.3-3.9C3.5 14.9 3 13.5 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z"/></svg>
         <svg x-cloak x-show="open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="m6 18 12-12M6 6l12 12"/></svg>
     </button>
 </div>

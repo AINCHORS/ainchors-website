@@ -14,6 +14,11 @@
         'orange' => 'bg-ainchors-card-orange',
     ];
     $bgClass = $bgMap[$variant] ?? $bgMap['green'];
+    $buttonColor = match ($variant) {
+        'blue' => '#07d5f0',
+        'orange' => '#f6ad55',
+        default => null,
+    };
 @endphp
 
 <article class="{{ $bgClass }} rounded-ainchors-card p-6 flex flex-col h-full">
@@ -31,7 +36,7 @@
         {{ $description }}
     </p>
 
-    <x-button variant="primary" :href="$buttonHref">
+    <x-button variant="primary" :href="$buttonHref" :style="$buttonColor ? 'background-color: '.$buttonColor : null">
         {{ $buttonLabel }}
     </x-button>
 </article>

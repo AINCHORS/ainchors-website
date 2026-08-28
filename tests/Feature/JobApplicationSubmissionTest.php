@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\JobPosition;
+use App\Models\User;
 use App\Services\Careers\JobApplicationService;
 use Database\Seeders\JobPositionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,9 +22,22 @@ class JobApplicationSubmissionTest extends TestCase
         $this->seed(JobPositionSeeder::class);
     }
 
-    public function test_public_application_form_uses_local_terms_and_privacy_links(): void
+    public function test_guest_must_login_before_viewing_or_submitting_an_application(): void
     {
         $this->get(route('job-applications.create'))
+            ->assertRedirect(route('login'));
+
+        $this->post(route('job-applications.store'))
+            ->assertRedirect(route('login'));
+
+        $this->get(route('job-applications.success'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_application_form_uses_local_terms_and_privacy_links(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('job-applications.create'))
             ->assertOk()
             ->assertSee('Digital Marketer')
             ->assertSee('Video Editor')
@@ -38,6 +52,7 @@ class JobApplicationSubmissionTest extends TestCase
     {
         Storage::fake(JobApplicationService::RESUME_DISK);
         $position = JobPosition::query()->where('slug', 'video-editor')->firstOrFail();
+        $this->actingAs(User::factory()->create());
 
         $this->post(route('job-applications.store'), [
             'full_name' => 'Applicant Name',
@@ -63,6 +78,8 @@ class JobApplicationSubmissionTest extends TestCase
 
     public function test_resume_and_recruitment_consent_are_required(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $this->from(route('job-applications.create'))
             ->post(route('job-applications.store'), [
                 'full_name' => 'Applicant Name',

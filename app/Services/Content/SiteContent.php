@@ -39,18 +39,18 @@ class SiteContent
             'testimonials' => [
                 [
                     'quote' => 'The topic of AI was explained in such a clear and comprehensible way that it made a highly complex subject easy for us to understand.',
-                    'avatar' => 'assets/avatar-ahmed.webp',
-                    'name' => 'Ahmed',
+                    'avatar' => 'assets/avatar-shamsah.jpg',
+                    'name' => 'Shamsah Ibrahim',
                 ],
                 [
                     'quote' => 'Angie Foong is extremely helpful and always does her best to ensure we understand everything, using plenty of real-time examples to make the concepts even clearer',
                     'avatar' => 'assets/avatar-mouza.jpg',
-                    'name' => 'Mouza',
+                    'name' => 'Mouza Alshehhi',
                 ],
                 [
                     'quote' => 'Angie is an excellent trainer who delivered an engaging and highly informative session, enabling me to gain a clear understanding of what AI truly is and how to harness AI tools to streamline my work, boost productivity, and achieve my goals more efficiently. I am also keen to further explore AI in the context of entrepreneurship as well as its applications in blockchain technology.',
-                    'avatar' => 'assets/avatar-shamsah.jpg',
-                    'name' => 'Shamsah',
+                    'avatar' => 'assets/avatar-ahmed.webp',
+                    'name' => 'Ahmed Salem',
                 ],
             ],
             'footer' => config('ainchors.footer'),

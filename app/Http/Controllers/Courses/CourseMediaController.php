@@ -17,7 +17,7 @@ class CourseMediaController extends Controller
     public function video(Request $request, Product $course): BinaryFileResponse
     {
         $content = $this->authorizedContent($request, $course);
-        $path = $this->safeAssetPath($course, $content->video_url, 'video/course.mp4');
+        $path = $this->safeAssetPath($course, $content->video_url, 'video', ['mp4']);
 
         return response()->file($path, [
             'Content-Type' => 'video/mp4',
@@ -29,11 +29,17 @@ class CourseMediaController extends Controller
     public function slides(Request $request, Product $course): BinaryFileResponse
     {
         $content = $this->authorizedContent($request, $course);
-        $path = $this->safeAssetPath($course, $content->slide_url, 'slides/course-slides.pptx');
-        $filename = Str::of($course->name)->ascii()->replaceMatches('/[^A-Za-z0-9]+/', '-')->trim('-').'-Course-Slides.pptx';
+        $path = $this->safeAssetPath($course, $content->slide_url, 'slides', ['pdf', 'ppt', 'pptx']);
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $filename = Str::of($course->name)->ascii()->replaceMatches('/[^A-Za-z0-9]+/', '-')->trim('-').'-Course-Slides.'.$extension;
+        $contentType = match ($extension) {
+            'pdf' => 'application/pdf',
+            'ppt' => 'application/vnd.ms-powerpoint',
+            default => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        };
 
         return response()->download($path, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'Content-Type' => $contentType,
             'Cache-Control' => 'private, no-store',
         ]);
     }
@@ -47,10 +53,13 @@ class CourseMediaController extends Controller
         return $content;
     }
 
-    private function safeAssetPath(Product $course, ?string $relativePath, string $expectedSuffix): string
+    /** @param array<int, string> $extensions */
+    private function safeAssetPath(Product $course, ?string $relativePath, string $directory, array $extensions): string
     {
-        $expected = 'courses/'.$course->slug.'/'.$expectedSuffix;
-        abort_unless($relativePath === $expected && ! str_contains($relativePath, '..'), 404);
+        abort_unless(is_string($relativePath) && ! str_contains($relativePath, '..'), 404);
+        $prefix = 'courses/'.$course->slug.'/'.$directory.'/';
+        $extension = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
+        abort_unless(str_starts_with($relativePath, $prefix) && in_array($extension, $extensions, true), 404);
         abort_unless(Storage::disk('local')->exists($relativePath), 404);
 
         return Storage::disk('local')->path($relativePath);

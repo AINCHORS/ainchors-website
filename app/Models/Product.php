@@ -9,8 +9,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
+    public const COURSE_CATEGORIES = [
+        'self_training' => 'Self Training Courses',
+        'digital_money_mastery' => 'Digital Money Mastery',
+        'career_advancement' => 'Career Advancement Courses',
+    ];
+
     protected $fillable = [
-        'type', 'sku', 'name', 'slug', 'short_description', 'description',
+        'type', 'course_category', 'sku', 'name', 'slug', 'short_description', 'description',
         'image', 'price', 'currency', 'billing_type', 'status', 'metadata',
     ];
 
@@ -70,6 +76,11 @@ class Product extends Model
     public function isPackage(): bool
     {
         return $this->type === 'course_package';
+    }
+
+    public function courseCategoryLabel(): ?string
+    {
+        return self::COURSE_CATEGORIES[$this->course_category] ?? null;
     }
 
     public function listPrice(): float

@@ -9,6 +9,7 @@
             src="{{ $legacySource }}"
             title="{{ $title }}"
             class="block min-h-[900px] w-full border-0"
+            scrolling="no"
             loading="eager"
         ></iframe>
     </section>

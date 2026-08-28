@@ -43,8 +43,11 @@
             </div>
         @endif
 
-        <x-button variant="primary" :href="$href">
-            {{ $buttonLabel }} <span aria-hidden="true">&rarr;</span>
+        <x-button variant="course" :href="$href" class="gap-2">
+            <span>{{ $buttonLabel }}</span>
+            <svg class="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 10h12m-4-4 4 4-4 4" />
+            </svg>
         </x-button>
     </div>
 </article>

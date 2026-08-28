@@ -9,14 +9,13 @@ class Enrollment extends Model
 {
     protected $fillable = [
         'user_id', 'product_id', 'source_order_item_id', 'status',
-        'progress_percent', 'enrolled_at', 'completed_at', 'expires_at',
+        'enrolled_at', 'expires_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'progress_percent' => 'decimal:2', 'enrolled_at' => 'datetime',
-            'completed_at' => 'datetime', 'expires_at' => 'datetime',
+            'enrolled_at' => 'datetime', 'expires_at' => 'datetime',
         ];
     }
 

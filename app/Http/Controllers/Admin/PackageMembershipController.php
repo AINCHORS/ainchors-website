@@ -11,10 +11,39 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class PackageMembershipController extends Controller
 {
     public function __construct(private readonly AuditService $audit) {}
+
+    public function index(Product $product): View
+    {
+        $this->assertPackage($product);
+
+        $product = Product::query()
+            ->select(['id', 'type', 'sku', 'name', 'slug', 'status', 'updated_at'])
+            ->with([
+                'childRelations' => fn ($query) => $query
+                    ->select(['id', 'parent_product_id', 'child_product_id', 'relation_type', 'sort_order', 'created_at'])
+                    ->where('relation_type', 'bundle_item')
+                    ->orderBy('sort_order'),
+                'childRelations.childProduct' => fn ($query) => $query->select(['id', 'name', 'slug', 'sku', 'type', 'status']),
+                'childRelations.childProduct.courseContent' => fn ($query) => $query->select(['id', 'product_id', 'video_url']),
+            ])
+            ->findOrFail($product->getKey());
+
+        $includedIds = $product->childRelations->pluck('child_product_id');
+        $availableCourses = Product::query()
+            ->select(['id', 'name', 'slug', 'sku', 'status'])
+            ->where('type', 'course')
+            ->whereNotIn('id', $includedIds)
+            ->with('courseContent:id,product_id,video_url')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.products.package-courses', compact('product', 'availableCourses'));
+    }
 
     public function store(Request $request, Product $product): RedirectResponse
     {
@@ -64,7 +93,7 @@ class PackageMembershipController extends Controller
             );
         });
 
-        return redirect()->route('admin.products.show', $product)
+        return redirect()->route('admin.package-members.index', $product)
             ->with('success', 'Course added to package.');
     }
 
@@ -116,7 +145,7 @@ class PackageMembershipController extends Controller
             );
         });
 
-        return redirect()->route('admin.products.show', $product)
+        return redirect()->route('admin.package-members.index', $product)
             ->with('success', 'Package course order updated.');
     }
 
@@ -162,7 +191,7 @@ class PackageMembershipController extends Controller
             );
         });
 
-        return redirect()->route('admin.products.show', $product)
+        return redirect()->route('admin.package-members.index', $product)
             ->with('success', 'Course removed from package.');
     }
 

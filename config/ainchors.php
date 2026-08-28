@@ -97,7 +97,6 @@ return [
         'contact-us',
         'courses',
         'digitalmarketing',
-        'events',
         'faqs',
         'financialliteracymastery',
         'fondy-foong',

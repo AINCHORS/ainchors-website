@@ -18,13 +18,17 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Commerce\CheckoutController;
+use App\Http\Controllers\Commerce\ExternalInvoiceRedirectController;
+use App\Http\Controllers\Commerce\HostedPaymentController;
 use App\Http\Controllers\Commerce\PaymentSuccessController;
+use App\Http\Controllers\Commerce\PaymentWebhookController;
 use App\Http\Controllers\Courses\CourseCatalogController;
 use App\Http\Controllers\Courses\CourseLearningController;
 use App\Http\Controllers\Courses\CourseMediaController;
 use App\Http\Controllers\Courses\MyCoursesController;
 use App\Http\Controllers\Legacy\LegacyPageController;
 use App\Http\Controllers\Modules\Company\AboutController;
+use App\Http\Controllers\Modules\Company\AngieFoongController;
 use App\Http\Controllers\Modules\Company\CareersController;
 use App\Http\Controllers\Modules\Company\JobApplicationController;
 use App\Http\Controllers\Modules\Consulting\GovernmentBookingController;
@@ -42,6 +46,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', HomeController::class)->name('home');
 Route::redirect('/home', '/', 301)->name('home.legacy');
 Route::get('/about-us', AboutController::class)->name('about');
+Route::get('/angie-foong', AngieFoongController::class)->name('angie-foong');
 Route::get('/faqs', FaqController::class)->name('faqs');
 Route::get('/join-us', CareersController::class)->name('hiring');
 Route::get('/contact-us', ContactController::class)->name('contact');
@@ -50,12 +55,12 @@ Route::get('/privacy--policy', PrivacyController::class)->name('privacy');
 
 Route::controller(PublicPageController::class)->group(function (): void {
     Route::get('/trainers-profile', 'trainers')->name('trainers');
+    Route::get('/fondy-foong', 'fondyFoong')->name('fondy-foong');
     Route::get('/testimonials', 'testimonials')->name('testimonials');
     Route::get('/success-story-of-angie', 'successStory')->name('success-story');
     Route::get('/consulting-main', 'consultingMain')->name('consulting.main');
     Route::get('/consulting-gov', 'consultingGovernment')->name('consulting.government');
     Route::get('/consulting-private', 'consultingPrivate')->name('consulting.private');
-    Route::get('/events', 'events')->name('events');
 });
 
 Route::get('/_legacy/{path}', [LegacyPageController::class, 'embedded'])
@@ -63,14 +68,15 @@ Route::get('/_legacy/{path}', [LegacyPageController::class, 'embedded'])
     ->name('legacy.embedded');
 Route::post('/contact-submissions', ContactSubmissionController::class)->name('contact.submit');
 
-Route::get('/join-us/apply', [JobApplicationController::class, 'create'])->name('job-applications.create');
-Route::post('/join-us/apply', [JobApplicationController::class, 'store'])->name('job-applications.store');
-Route::get('/join-us/application-success', [JobApplicationController::class, 'success'])->name('job-applications.success');
+Route::post('/payments/stripe/webhook', [PaymentWebhookController::class, 'stripe'])->name('payments.stripe.webhook');
+Route::post('/payments/paypal/webhook', [PaymentWebhookController::class, 'paypal'])->name('payments.paypal.webhook');
 
-Route::redirect('/boooking-page', '/consulting-gov/booking', 301)->name('consulting.government.booking.legacy');
-Route::redirect('/booking-page', '/consulting-gov/booking', 301)->name('consulting.government.booking.legacy-alias');
-Route::get('/consulting-gov/booking', [GovernmentBookingController::class, 'create'])->name('consulting.government.booking');
-Route::post('/consulting-gov/booking', [GovernmentBookingController::class, 'store'])->name('consulting.government.booking.store');
+Route::redirect('/boooking-page', '/consulting-booking', 301)->name('consulting.booking.legacy');
+Route::redirect('/booking-page', '/consulting-booking', 301)->name('consulting.booking.legacy-alias');
+Route::redirect('/consulting-gov/booking', '/consulting-booking', 301)->name('consulting.booking.government-legacy');
+Route::redirect('/consulting-private/booking', '/consulting-booking', 301)->name('consulting.booking.private-legacy');
+Route::get('/consulting-booking', [GovernmentBookingController::class, 'create'])->name('consulting.booking');
+Route::post('/consulting-booking', [GovernmentBookingController::class, 'store'])->name('consulting.booking.store');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -90,12 +96,20 @@ Route::get('/courses/{course:slug}', [CourseCatalogController::class, 'show'])->
 Route::get('/course-packages/{package:slug}', [CourseCatalogController::class, 'package'])->name('packages.show');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/join-us/apply', [JobApplicationController::class, 'create'])->name('job-applications.create');
+    Route::post('/join-us/apply', [JobApplicationController::class, 'store'])->name('job-applications.store');
+    Route::get('/join-us/application-success', [JobApplicationController::class, 'success'])->name('job-applications.success');
+
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/purchase-history', PurchaseHistoryController::class)->name('purchase-history');
+    Route::get('/purchase-history/invoices/{externalInvoice}', ExternalInvoiceRedirectController::class)->name('purchase-history.invoice');
     Route::get('/checkouts/{product:slug}', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkouts/{product:slug}', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/payments/stripe/{order:order_number}/return', [HostedPaymentController::class, 'stripeReturn'])->name('payments.stripe.return');
+    Route::get('/payments/paypal/{order:order_number}/return', [HostedPaymentController::class, 'paypalReturn'])->name('payments.paypal.return');
+    Route::get('/payments/{provider}/{order:order_number}/cancel', [HostedPaymentController::class, 'cancel'])->name('payments.cancel');
     Route::get('/orders/{order:order_number}/success', PaymentSuccessController::class)->name('checkout.success');
     Route::get('/my-courses', MyCoursesController::class)->name('my-courses');
     Route::get('/learn/{course:slug}', CourseLearningController::class)->name('learn.show');
@@ -121,6 +135,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
     Route::match(['put', 'patch'], '/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
     Route::patch('/products/{product}/status', [AdminProductController::class, 'updateStatus'])->name('products.status');
+    Route::get('/products/{product}/package-courses', [AdminPackageMembershipController::class, 'index'])->name('package-members.index');
     Route::post('/products/{product}/package-courses', [AdminPackageMembershipController::class, 'store'])->name('package-members.store');
     Route::patch('/products/{product}/package-courses/reorder', [AdminPackageMembershipController::class, 'reorder'])->name('package-members.reorder');
     Route::delete('/products/{product}/package-courses/{course}', [AdminPackageMembershipController::class, 'destroy'])->name('package-members.destroy');
@@ -129,6 +144,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::get('/course-content/create', [AdminCourseContentController::class, 'create'])->name('course-content.create');
     Route::post('/course-content', [AdminCourseContentController::class, 'store'])->name('course-content.store');
     Route::get('/course-content/{courseContent}/edit', [AdminCourseContentController::class, 'edit'])->name('course-content.edit');
+    Route::get('/course-content/{courseContent}/video-preview', [AdminCourseContentController::class, 'videoPreview'])->name('course-content.video-preview');
+    Route::get('/course-content/{courseContent}/slides-preview', [AdminCourseContentController::class, 'slidesPreview'])->name('course-content.slides-preview');
     Route::match(['put', 'patch'], '/course-content/{courseContent}', [AdminCourseContentController::class, 'update'])->name('course-content.update');
 
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');

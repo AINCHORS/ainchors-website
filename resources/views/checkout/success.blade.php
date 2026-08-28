@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
-@php($product = $order->items->first()->product)
+@php($item = $order->items->first())
+@php($product = $item->product)
 @php($payment = $order->payments->firstWhere('status', 'paid'))
 
 @section('title', 'Payment Successful | AINCHORS')
@@ -9,10 +10,10 @@
 <section class="success-section">
     <div class="success-card">
         <div class="success-icon">✓</div>
-        <span class="eyebrow">Test payment complete</span>
+        <span class="eyebrow">Payment complete</span>
         <h1>Payment Successful</h1>
-        <h2>{{ $product->name }}</h2>
-        <p class="success-price">USD {{ number_format((float) $order->total_amount, 0) }}</p>
+        <h2>{{ $item->product_name }}</h2>
+        <p class="success-price">{{ $order->currency }} {{ number_format((float) $order->total_amount, 0) }}</p>
         @if ($product->isPackage())
             <p><strong>{{ $product->bundleProducts()->count() }} Courses Unlocked</strong></p>
         @else

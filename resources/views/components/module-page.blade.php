@@ -23,6 +23,19 @@
         const root = host.attachShadow({ mode: 'open' });
         root.append(template.content.cloneNode(true));
 
+        @if ($page['key'] === 'about')
+            const backToTop = [...root.querySelectorAll('button')].find((button) =>
+                (button.textContent || '').trim().toLowerCase() === 'back to top'
+            );
+
+            if (backToTop) {
+                backToTop.type = 'button';
+                backToTop.addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+        @endif
+
         @if ($page['key'] === 'join-us')
             const applicationUrl = @json(route('job-applications.create'));
             root.querySelectorAll('a').forEach((link) => {
@@ -137,6 +150,79 @@
                 link.setAttribute('rel', 'noopener noreferrer');
             });
 
+            const legacyFeedbackType = root.querySelector('.multi_select_form');
+            let feedbackTypeSelect = root.querySelector('[name="feedback_type"]');
+
+            if (legacyFeedbackType) {
+                feedbackTypeSelect = document.createElement('select');
+                feedbackTypeSelect.id = 'ainchors-feedback-type';
+                feedbackTypeSelect.name = 'feedback_type';
+                feedbackTypeSelect.className = 'form-control ainchors-feedback-type';
+                feedbackTypeSelect.required = true;
+                feedbackTypeSelect.setAttribute('aria-required', 'true');
+
+                [
+                    ['', 'Choose a feedback type'],
+                    ['general_enquiry', 'General Enquiry'],
+                    ['training_enquiry', 'Training Enquiry'],
+                    ['consulting_enquiry', 'Consulting Enquiry'],
+                    ['course_support', 'Course Support'],
+                    ['partnership', 'Partnership'],
+                    ['feedback_complaint', 'Feedback / Complaint'],
+                ].forEach(([value, label]) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    feedbackTypeSelect.append(option);
+                });
+
+                legacyFeedbackType.replaceWith(feedbackTypeSelect);
+                root.querySelector('label[for="ZgPbqV1EWkCCYlKMuBnB"]')
+                    ?.setAttribute('for', feedbackTypeSelect.id);
+
+                const feedbackStyles = document.createElement('style');
+                feedbackStyles.textContent = `
+                    .ainchors-feedback-type {
+                        width: 100% !important;
+                        min-height: 43px !important;
+                        padding: 10px 12px !important;
+                        border: 1px solid #b8b8b8 !important;
+                        border-radius: 4px !important;
+                        background-color: #ffffff !important;
+                        color: #2b2b2b !important;
+                        font: inherit !important;
+                        line-height: 1.25 !important;
+                        box-shadow: none !important;
+                        appearance: auto !important;
+                        -webkit-appearance: menulist !important;
+                        cursor: pointer;
+                    }
+                    .ainchors-feedback-type:focus {
+                        border-color: #37ad82 !important;
+                        outline: 2px solid rgba(55, 173, 130, .18) !important;
+                        outline-offset: 0;
+                    }
+                `;
+                root.append(feedbackStyles);
+            }
+
+            const requestedType = new URLSearchParams(window.location.search).get('type');
+            const feedbackTypeAliases = {
+                training: 'training_enquiry',
+                consulting: 'consulting_enquiry',
+                partnership: 'partnership',
+                support: 'course_support',
+                feedback: 'feedback_complaint',
+            };
+
+            if (feedbackTypeSelect) {
+                const selectedType = feedbackTypeAliases[requestedType] ?? requestedType ?? '';
+
+                if ([...feedbackTypeSelect.options].some((option) => option.value === selectedType)) {
+                    feedbackTypeSelect.value = selectedType;
+                }
+            }
+
             const qrTrigger = root.querySelector('#button-P1eb2q_TSk_btn')
                 ?? [...root.querySelectorAll('button')].find((button) =>
                     (button.textContent || '').trim().toLowerCase() === 'quick scan here!'
@@ -238,6 +324,7 @@
 
                 const value = (selector) => form.querySelector(selector)?.value?.trim() ?? '';
                 const payload = {
+                    feedback_type: value('[name="feedback_type"]'),
                     full_name: value('[name="full_name"]') || value('[name="last_name"]'),
                     email: value('[name="email"]'),
                     phone: value('[name="phone"]'),

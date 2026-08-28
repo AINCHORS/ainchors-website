@@ -57,20 +57,66 @@ class LegacyPageController extends Controller
             $html,
         );
 
-        if ($embedded && $path === 'consulting-main') {
-            $bookingUrl = htmlspecialchars(route('consulting.government.booking'), ENT_QUOTES, 'UTF-8');
+        if ($embedded && in_array($path, ['consulting-main', 'consulting-gov', 'consulting-private'], true)) {
+            $destinationUrl = $path === 'consulting-main'
+                ? 'https://wa.me/61418802086'
+                : route('consulting.booking');
+            $destinationUrl = htmlspecialchars($destinationUrl, ENT_QUOTES, 'UTF-8');
 
             $html = preg_replace_callback(
                 '~<a\b[^>]*\baria-label\s*=\s*(["\'])Book\s+Now\s*\1[^>]*>~i',
-                static function (array $match) use ($bookingUrl): string {
-                    return preg_replace(
+                static function (array $match) use ($destinationUrl, $path): string {
+                    $tag = preg_replace(
                         '~\bhref\s*=\s*(["\']).*?\1~i',
-                        'href="'.$bookingUrl.'"',
+                        'href="'.$destinationUrl.'"',
                         $match[0],
                     ) ?? $match[0];
+
+                    if ($path !== 'consulting-main') {
+                        return $tag;
+                    }
+
+                    $tag = preg_replace('~\s+target\s*=\s*(["\']).*?\1~i', '', $tag) ?? $tag;
+                    $tag = preg_replace('~\s+rel\s*=\s*(["\']).*?\1~i', '', $tag) ?? $tag;
+
+                    return rtrim(substr($tag, 0, -1)).' target="_blank" rel="noopener noreferrer">';
                 },
                 $html,
             ) ?? $html;
+        }
+
+        if ($embedded && $path === 'trainers-profile') {
+            $html = str_replace(
+                'https://angiefoong.com/founders',
+                route('angie-foong'),
+                $html,
+            );
+
+            $fondyUrl = htmlspecialchars(route('fondy-foong'), ENT_QUOTES, 'UTF-8');
+            $html = preg_replace_callback(
+                '~<a\b(?=[^>]*\bid="button-1YxNJRczNr_btn")[^>]*>~i',
+                static function (array $match) use ($fondyUrl): string {
+                    $tag = preg_replace(
+                        '~\bhref\s*=\s*(["\']).*?\1~i',
+                        'href="'.$fondyUrl.'"',
+                        $match[0],
+                    ) ?? $match[0];
+                    $tag = preg_replace('~\s+target\s*=\s*(["\']).*?\1~i', '', $tag) ?? $tag;
+                    $tag = preg_replace('~\s+rel\s*=\s*(["\']).*?\1~i', '', $tag) ?? $tag;
+
+                    return preg_replace(
+                        '~\baria-label\s*=\s*(["\']).*?\1~i',
+                        'aria-label="View Story"',
+                        $tag,
+                    ) ?? $tag;
+                },
+                $html,
+            ) ?? $html;
+            $html = str_replace(
+                '<span class="main-heading-button">View More</span>',
+                '<span class="main-heading-button">View Story</span>',
+                $html,
+            );
         }
 
         // Internal links from embedded legacy pages navigate the parent Laravel
@@ -100,7 +146,7 @@ class LegacyPageController extends Controller
         );
 
         if ($embedded) {
-            $injection = '<style>#nav-menu-popup,.c-section:has(.c-nav-menu),.footersection{display:none!important}html,body{overflow-x:hidden!important}</style>';
+            $injection = '<style>#nav-menu-popup,#section-BK1OobeAEu,.c-section:has(.c-nav-menu),.footersection{display:none!important}html,body{overflow-x:hidden!important;overflow-y:hidden!important}</style><script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll(".c-nav-menu").forEach(function(nav){const legacyHeader=nav.closest(".c-section");if(legacyHeader){legacyHeader.remove()}});document.querySelectorAll("#nav-menu-popup,.footersection").forEach(function(element){element.remove()})});</script>';
 
             if ($path === 'contact-us') {
                 $endpoint = json_encode(route('contact.submit'), JSON_THROW_ON_ERROR);
@@ -114,11 +160,27 @@ class LegacyPageController extends Controller
             }
 
             if ($path === 'consulting-main') {
-                $bookingUrl = json_encode(route('consulting.government.booking'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $whatsappUrl = json_encode('https://wa.me/61418802086', JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $injection .= '<script>(function(){const whatsappUrl='.$whatsappUrl.';const isBookNow=function(element){if(!element){return false}const label=((element.getAttribute("aria-label")||element.textContent||"").toLowerCase().replace(/[^a-z]/g,""));return label==="booknow"};const updateLinks=function(){document.querySelectorAll("a").forEach(function(link){if(!isBookNow(link)){return}if(link.getAttribute("href")!==whatsappUrl){link.setAttribute("href",whatsappUrl)}if(link.getAttribute("target")!=="_blank"){link.setAttribute("target","_blank")}if(link.getAttribute("rel")!=="noopener noreferrer"){link.setAttribute("rel","noopener noreferrer")}})};document.addEventListener("click",function(event){const element=event.target instanceof Element?event.target.closest("a,button,[role=button]"):null;if(isBookNow(element)){event.preventDefault();event.stopImmediatePropagation();window.open(whatsappUrl,"_blank","noopener,noreferrer")}},true);window.addEventListener("load",updateLinks);new MutationObserver(updateLinks).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["href","target","rel","aria-label"]})})();</script>';
+            }
+
+            if (in_array($path, ['consulting-gov', 'consulting-private'], true)) {
+                $bookingUrl = json_encode(route('consulting.booking'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
                 $injection .= '<script>(function(){const bookingUrl='.$bookingUrl.';const isBookNow=function(element){if(!element){return false}const label=((element.getAttribute("aria-label")||element.textContent||"").toLowerCase().replace(/[^a-z]/g,""));return label==="booknow"};const updateLinks=function(){document.querySelectorAll("a").forEach(function(link){if(isBookNow(link)){if(link.getAttribute("href")!==bookingUrl){link.setAttribute("href",bookingUrl)}if(link.getAttribute("target")!=="_parent"){link.setAttribute("target","_parent")}if(link.hasAttribute("rel")){link.removeAttribute("rel")}})};document.addEventListener("click",function(event){const element=event.target instanceof Element?event.target.closest("a,button,[role=button]"):null;if(isBookNow(element)){event.preventDefault();event.stopImmediatePropagation();window.parent.location.assign(bookingUrl)}},true);window.addEventListener("load",updateLinks);new MutationObserver(updateLinks).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["href","aria-label"]})})();</script>';
             }
 
-            $injection .= '<script>document.addEventListener("DOMContentLoaded",function(){const report=function(){parent.postMessage({source:"ainchors-legacy",type:"height",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},location.origin)};new ResizeObserver(report).observe(document.body);window.addEventListener("load",report);report()})</script>';
+            if ($path === 'trainers-profile') {
+                $fondyUrl = json_encode(route('fondy-foong'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $injection .= '<style>#button-x0KJmD9ZzT_btn,#button-1YxNJRczNr_btn,#button-IIjIZEpKRo_btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:0!important;padding:12px 24px!important;border:1px solid #37ad82!important;border-radius:8px!important;background:#37ad82!important;color:#fff!important;font-weight:600!important;transition:background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease!important}#button-x0KJmD9ZzT_btn:hover,#button-1YxNJRczNr_btn:hover,#button-IIjIZEpKRo_btn:hover,#button-x0KJmD9ZzT_btn:focus-visible,#button-1YxNJRczNr_btn:focus-visible,#button-IIjIZEpKRo_btn:focus-visible{background:#e8fff7!important;color:#37ad82!important;border-color:#37ad82!important;box-shadow:0 4px 10px rgba(55,173,130,.18)!important}#button-x0KJmD9ZzT_btn:focus-visible,#button-1YxNJRczNr_btn:focus-visible,#button-IIjIZEpKRo_btn:focus-visible{outline:3px solid rgba(55,173,130,.35);outline-offset:3px}</style><script>(function(){const fondyUrl='.$fondyUrl.';const updateViewStory=function(){const button=document.getElementById("button-1YxNJRczNr_btn");if(!button){return}if(button.getAttribute("href")!==fondyUrl){button.setAttribute("href",fondyUrl)}if(button.getAttribute("target")!=="_parent"){button.setAttribute("target","_parent")}if(button.getAttribute("aria-label")!=="View Story"){button.setAttribute("aria-label","View Story")}button.removeAttribute("rel");const text=button.querySelector(".main-heading-button");if(text&&text.textContent.trim()!=="View Story"){text.textContent="View Story"}};document.addEventListener("DOMContentLoaded",updateViewStory);window.addEventListener("load",updateViewStory);document.addEventListener("click",function(event){const button=event.target instanceof Element?event.target.closest("#button-1YxNJRczNr_btn"):null;if(button){event.preventDefault();event.stopImmediatePropagation();window.parent.location.assign(fondyUrl)}},true);new MutationObserver(updateViewStory).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["href","target","aria-label"]})})();</script>';
+            }
+
+            if ($path === 'fondy-foong') {
+                $homeUrl = json_encode(route('home'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $testimonialsUrl = json_encode(route('testimonials'), JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $injection .= '<style>#button-sMpCEfOO52_btn,#button-JvjztUayrI_btn,#button-xKpI38KBQ7_btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:0!important;padding:12px 24px!important;border:1px solid #37ad82!important;border-radius:8px!important;background:#37ad82!important;color:#fff!important;font-weight:600!important;transition:background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease!important}#button-sMpCEfOO52_btn:hover,#button-JvjztUayrI_btn:hover,#button-xKpI38KBQ7_btn:hover,#button-sMpCEfOO52_btn:focus-visible,#button-JvjztUayrI_btn:focus-visible,#button-xKpI38KBQ7_btn:focus-visible{background:#e8fff7!important;color:#37ad82!important;border-color:#37ad82!important;box-shadow:0 4px 10px rgba(55,173,130,.18)!important}#button-sMpCEfOO52_btn:focus-visible,#button-JvjztUayrI_btn:focus-visible,#button-xKpI38KBQ7_btn:focus-visible{outline:3px solid rgba(55,173,130,.35);outline-offset:3px}</style><script>(function(){const destinations={"button-sMpCEfOO52_btn":'.$homeUrl.',"button-JvjztUayrI_btn":'.$testimonialsUrl.'};const updateLinks=function(){Object.entries(destinations).forEach(function(entry){const button=document.getElementById(entry[0]),url=entry[1];if(!button){return}if(button.getAttribute("href")!==url){button.setAttribute("href",url)}if(button.getAttribute("target")!=="_parent"){button.setAttribute("target","_parent")}button.removeAttribute("rel")})};document.addEventListener("DOMContentLoaded",function(){updateLinks();const backToTop=document.getElementById("button-xKpI38KBQ7_btn");if(backToTop){backToTop.addEventListener("click",function(event){event.preventDefault();window.parent.scrollTo({top:0,behavior:"smooth"})})}});window.addEventListener("load",updateLinks);document.addEventListener("click",function(event){const button=event.target instanceof Element?event.target.closest("#button-sMpCEfOO52_btn,#button-JvjztUayrI_btn"):null;if(button&&destinations[button.id]){event.preventDefault();event.stopImmediatePropagation();window.parent.location.assign(destinations[button.id])}},true);new MutationObserver(updateLinks).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["href","target"]})})();</script>';
+            }
+
+            $injection .= '<script>document.addEventListener("DOMContentLoaded",function(){const report=function(){parent.postMessage({source:"ainchors-legacy",type:"height",height:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},location.origin)};const observer=new ResizeObserver(report);observer.observe(document.documentElement);observer.observe(document.body);window.addEventListener("load",report);if(document.fonts&&document.fonts.ready){document.fonts.ready.then(report)}requestAnimationFrame(report);report()})</script>';
             $html = str_replace('</head>', $injection.'</head>', $html);
         }
 

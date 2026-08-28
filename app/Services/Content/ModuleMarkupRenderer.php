@@ -154,6 +154,14 @@ class ModuleMarkupRenderer
             $html,
         ) ?? $html;
 
+        if ($key === 'about') {
+            $html = str_replace(
+                'https://angiefoong.com/founders',
+                route('angie-foong'),
+                $html,
+            );
+        }
+
         if ($key === 'join-us') {
             $applyUrl = htmlspecialchars(route('job-applications.create'), ENT_QUOTES, 'UTF-8');
             $html = preg_replace_callback(

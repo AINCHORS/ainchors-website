@@ -9,6 +9,7 @@
     $variants = [
         'primary' => 'bg-ainchors-green text-ainchors-white hover:bg-opacity-90 hover:shadow-md',
         'secondary' => 'bg-transparent border border-ainchors-green text-ainchors-green hover:bg-ainchors-green hover:text-ainchors-white',
+        'course' => 'border border-ainchors-green bg-ainchors-green text-ainchors-white hover:bg-[#E8FFF7] hover:text-[#0F4C43] hover:shadow-md focus-visible:bg-[#E8FFF7] focus-visible:text-[#0F4C43]',
     ];
     $classes = $base . ' ' . ($variants[$variant] ?? $variants['primary']);
 @endphp

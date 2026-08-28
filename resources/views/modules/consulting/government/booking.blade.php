@@ -30,7 +30,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('consulting.government.booking.store') }}" class="space-y-5" novalidate>
+                <form method="POST" action="{{ route('consulting.booking.store') }}" class="space-y-5" novalidate>
                     @csrf
 
                     <div>

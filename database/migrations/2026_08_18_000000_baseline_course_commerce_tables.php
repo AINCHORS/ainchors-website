@@ -48,9 +48,13 @@ return new class extends Migration
                 $table->string('video_title')->nullable();
                 $table->string('video_provider', 100)->nullable();
                 $table->string('video_url', 1000);
+                $table->string('video_original_name')->nullable();
+                $table->unsignedBigInteger('video_file_size')->nullable();
                 $table->unsignedInteger('video_duration_seconds')->nullable();
                 $table->string('slide_name')->nullable();
                 $table->string('slide_url', 1000)->nullable();
+                $table->string('slide_original_name')->nullable();
+                $table->unsignedBigInteger('slide_file_size')->nullable();
                 $table->timestamps();
             });
         }
@@ -109,7 +113,7 @@ return new class extends Migration
                 $table->foreignId('user_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
                 $table->foreignId('product_id')->constrained('products')->cascadeOnUpdate();
                 $table->foreignId('source_order_item_id')->nullable()->constrained('order_items')->cascadeOnUpdate()->nullOnDelete();
-                $table->enum('status', ['active', 'completed', 'expired', 'revoked'])->default('active');
+                $table->enum('status', ['active', 'expired', 'revoked'])->default('active');
                 $table->decimal('progress_percent', 5, 2)->default(0);
                 $table->dateTime('enrolled_at');
                 $table->dateTime('completed_at')->nullable();

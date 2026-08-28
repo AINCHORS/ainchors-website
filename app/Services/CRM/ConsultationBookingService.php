@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class ConsultationBookingService
 {
-    public const GOVERNMENT_SOURCE_PAGE = '/consulting-gov/booking';
+    public const BOOKING_SOURCE_PAGE = '/consulting-booking';
 
     /**
      * @param array{full_name: string, email: string, phone: string, company_name?: string|null} $submission
@@ -32,7 +32,7 @@ class ConsultationBookingService
                 'user_id' => $user?->id,
                 'status' => 'requested',
                 'requested_at' => now(),
-                'source_page' => self::GOVERNMENT_SOURCE_PAGE,
+                'source_page' => self::BOOKING_SOURCE_PAGE,
             ]);
         });
     }

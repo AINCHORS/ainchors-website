@@ -87,7 +87,7 @@ class UserController extends Controller
             ->withCount(['enrollments', 'orders'])
             ->with([
                 'enrollments' => fn ($query) => $query
-                    ->select(['id', 'user_id', 'product_id', 'status', 'progress_percent', 'enrolled_at', 'expires_at'])
+                    ->select(['id', 'user_id', 'product_id', 'status', 'enrolled_at', 'expires_at'])
                     ->with('product:id,name,slug,type,status')
                     ->latest('enrolled_at'),
                 'orders' => fn ($query) => $query

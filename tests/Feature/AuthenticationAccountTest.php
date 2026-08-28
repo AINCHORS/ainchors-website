@@ -232,14 +232,12 @@ class AuthenticationAccountTest extends TestCase
             'user_id' => $userA->id,
             'product_id' => $courseA->id,
             'status' => 'active',
-            'progress_percent' => 0,
             'enrolled_at' => now(),
         ]);
         Enrollment::query()->create([
             'user_id' => $userB->id,
             'product_id' => $courseB->id,
             'status' => 'active',
-            'progress_percent' => 0,
             'enrolled_at' => now(),
         ]);
 

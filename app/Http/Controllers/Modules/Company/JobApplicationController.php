@@ -27,7 +27,7 @@ class JobApplicationController extends Controller
             'phone' => ['required', 'string', 'max:50'],
             'interview_available_on' => ['nullable', 'date'],
             'job_position_id' => ['required', 'integer', Rule::exists('job_positions', 'id')->where('is_active', true)],
-            'resume' => ['required', 'file', 'mimes:pdf,doc,docx,xls,csv,jpg,jpeg,png,gif', 'max:10240'],
+            'resume' => ['required', 'file', 'mimes:pdf,doc,docx,xls,csv,jpg,jpeg,png,gif', 'max:25600'],
             'short_note' => ['nullable', 'string', 'max:3000'],
             'recruitment_consent' => ['accepted'],
         ]);

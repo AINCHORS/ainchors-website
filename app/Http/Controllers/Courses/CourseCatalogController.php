@@ -21,7 +21,7 @@ class CourseCatalogController extends Controller
         $courses = Product::query()->where('type', 'course')->where('status', 'active')->orderBy('id')->get();
         $package = Product::query()->where('type', 'course_package')->where('status', 'active')->with('bundleProducts')->first();
         $ownedCourseIds = $request->user()
-            ? $request->user()->enrollments()->whereIn('status', ['active', 'completed'])->pluck('product_id')->all()
+            ? $request->user()->enrollments()->where('status', 'active')->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))->pluck('product_id')->all()
             : [];
         $packageOwned = $request->user() && $package
             ? $this->checkout->isFullyOwned($request->user(), $package)

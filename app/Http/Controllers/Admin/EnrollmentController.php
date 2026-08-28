@@ -24,12 +24,13 @@ class EnrollmentController extends Controller
 
     public function index(Request $request): View
     {
+        $this->enrollments->expireDue();
         $search = trim((string) $request->input('q', ''));
 
         $enrollments = Enrollment::query()
             ->select([
                 'id', 'user_id', 'product_id', 'source_order_item_id', 'status',
-                'progress_percent', 'enrolled_at', 'completed_at', 'expires_at',
+                'enrolled_at', 'completed_at', 'expires_at',
                 'created_at', 'updated_at',
             ])
             ->with([

@@ -25,7 +25,7 @@
             </div>
         @else
             <div class="overflow-x-auto rounded-ainchors-card border border-ainchors-grey-light/25 bg-ainchors-white shadow-lg shadow-ainchors-navy/5">
-                <table class="min-w-[800px] w-full font-sans text-sm">
+                <table class="min-w-[1100px] w-full font-sans text-sm">
                     <caption class="sr-only">Purchase history for your AINCHORS account</caption>
                     <thead class="bg-ainchors-green-hero text-left text-ainchors-navy">
                         <tr>
@@ -35,11 +35,14 @@
                             <th scope="col" class="px-5 py-4 font-semibold">Amount</th>
                             <th scope="col" class="px-5 py-4 font-semibold">Order status</th>
                             <th scope="col" class="px-5 py-4 font-semibold">Payment status</th>
+                            <th scope="col" class="px-5 py-4 font-semibold">Payment method</th>
+                            <th scope="col" class="px-5 py-4 font-semibold">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-ainchors-grey-light/20">
                         @foreach ($orders as $order)
-                            @php($payment = $order->payments->sortByDesc('created_at')->first())
+                            @php($payment = $order->payments->first())
+                            @php($invoice = $customerInvoices->get($order->id))
                             <tr class="align-top text-ainchors-grey-dark">
                                 <td class="whitespace-nowrap px-5 py-4 font-semibold text-ainchors-navy">{{ $order->order_number }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $order->placed_at?->format('j M Y') ?? $order->created_at?->format('j M Y') ?? '—' }}</td>
@@ -53,6 +56,29 @@
                                 <td class="whitespace-nowrap px-5 py-4">{{ $order->currency }} {{ number_format((float) $order->total_amount, 2) }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $payment ? ucfirst(str_replace('_', ' ', $payment->status)) : '—' }}</td>
+                                <td class="whitespace-nowrap px-5 py-4">{{ $payment ? ucfirst($payment->provider) : '—' }}</td>
+                                <td class="px-5 py-4">
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach ($order->items as $item)
+                                            @php($enrollment = $activeEnrollments->get($item->product_id))
+                                            @if ($enrollment?->product)
+                                                <a href="{{ route('learn.show', $enrollment->product) }}" class="rounded-ainchors-button bg-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-white transition hover:bg-ainchors-navy">
+                                                    Access Course
+                                                </a>
+                                            @endif
+                                        @endforeach
+
+                                        @if ($invoice)
+                                            <a href="{{ route('purchase-history.invoice', $invoice) }}" class="rounded-ainchors-button border border-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">
+                                                Invoice
+                                            </a>
+                                        @endif
+
+                                        @if (! $invoice && $order->items->every(fn ($item) => ! $activeEnrollments->has($item->product_id)))
+                                            <span class="py-2 text-xs text-ainchors-grey-light">No action available</span>
+                                        @endif
+                                    </div>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

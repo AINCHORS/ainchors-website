@@ -16,12 +16,23 @@ class EnrollmentService
     /** @return Collection<int, Enrollment> */
     public function activeFor(User $user): Collection
     {
+        $this->expireDue($user);
+
         return $user->enrollments()
             ->with(['product.courseContent'])
-            ->whereIn('status', ['active', 'completed'])
-            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->where('status', 'active')
             ->orderByDesc('enrolled_at')
             ->get();
+    }
+
+    public function expireDue(?User $user = null): int
+    {
+        return Enrollment::query()
+            ->where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->when($user, fn ($query) => $query->where('user_id', $user->id))
+            ->update(['status' => 'expired', 'updated_at' => now()]);
     }
 
     public function grant(User $user, Product $course, ?OrderItem $source = null, ?CarbonInterface $expiresAt = null): Enrollment
@@ -41,7 +52,6 @@ class EnrollmentService
                     'source_order_item_id' => $source?->id ?? $enrollment->source_order_item_id,
                     'status' => 'active',
                     'enrolled_at' => now(),
-                    'completed_at' => null,
                     'expires_at' => $expiresAt,
                 ])->save();
             } elseif ($expiresAt !== null && (! $enrollment->expires_at || ! $enrollment->expires_at->equalTo($expiresAt))) {

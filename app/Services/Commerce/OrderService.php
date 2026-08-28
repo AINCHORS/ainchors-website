@@ -15,7 +15,20 @@ class OrderService
     public function historyFor(User $user): Collection
     {
         return $user->orders()
-            ->with(['items.product', 'payments'])
+            ->with([
+                'items' => fn ($query) => $query->select([
+                    'id', 'order_id', 'product_id', 'product_name', 'quantity',
+                    'unit_price', 'line_total', 'metadata', 'created_at',
+                ]),
+                'payments' => fn ($query) => $query->select([
+                    'id', 'order_id', 'provider', 'amount', 'currency',
+                    'status', 'paid_at', 'created_at',
+                ])->latest('id'),
+                'externalInvoices' => fn ($query) => $query->select([
+                    'id', 'order_id', 'provider', 'external_reference',
+                    'invoice_number', 'invoice_url', 'status', 'issued_at',
+                ]),
+            ])
             ->latest()
             ->get();
     }
@@ -28,15 +41,34 @@ class OrderService
             ->first();
     }
 
+    public function awaitingStripePurchaseFor(User $user, Product $course): ?Order
+    {
+        return Order::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'awaiting_payment')
+            ->whereHas('items', fn ($query) => $query->where('product_id', $course->id))
+            ->whereHas('payments', fn ($query) => $query
+                ->where('provider', 'stripe')
+                ->whereIn('status', ['pending', 'processing']))
+            ->with(['items.product', 'payments' => fn ($query) => $query->latest('id')])
+            ->latest('id')
+            ->first();
+    }
+
     /** @return array{Order, OrderItem} */
     public function createForProduct(User $user, Product $product, string $idempotencyKey): array
     {
+        $currency = strtoupper((string) $product->currency);
+        $courseProductIds = $product->isCourse()
+            ? [$product->id]
+            : $product->bundleProducts()->where('products.type', 'course')->pluck('products.id')->all();
+
         $order = Order::query()->create([
             'order_number' => 'AIN-'.now()->format('YmdHis').'-'.Str::upper(Str::random(8)),
             'idempotency_key' => $idempotencyKey,
             'user_id' => $user->id,
             'status' => 'awaiting_payment',
-            'currency' => $product->currency,
+            'currency' => $currency,
             'subtotal' => $product->price,
             'discount_total' => 0,
             'tax_total' => 0,
@@ -50,7 +82,12 @@ class OrderService
             'quantity' => 1,
             'unit_price' => $product->price,
             'line_total' => $product->price,
-            'metadata' => ['product_type' => $product->type],
+            'metadata' => [
+                'product_type' => $product->type,
+                'sku' => $product->sku,
+                'currency' => $currency,
+                'course_product_ids' => $courseProductIds,
+            ],
         ]);
 
         return [$order, $item];

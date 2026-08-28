@@ -71,15 +71,6 @@
 
                             <li>
                                 <a
-                                    href="{{ route('events') }}"
-                                    class="text-white transition hover:text-ainchors-green"
-                                >
-                                    Events
-                                </a>
-                            </li>
-
-                            <li>
-                                <a
                                     href="{{ route('hiring') }}"
                                     class="text-white transition hover:text-ainchors-green"
                                 >

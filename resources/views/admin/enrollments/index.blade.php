@@ -11,7 +11,7 @@
 
     <details class="mb-6 rounded-ainchors-card border border-ainchors-navy/10 bg-white shadow-sm" @if($errors->hasAny(['user_id', 'product_id', 'expires_at', 'reason'])) open @endif>
         <summary class="cursor-pointer list-none px-5 py-4 font-semibold text-ainchors-navy marker:hidden focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ainchors-green">
-            <span class="flex items-center justify-between gap-4">Grant enrollment<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/></svg></span>
+            <span class="flex items-center justify-between gap-4">Add enrollment<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6"/></svg></span>
         </summary>
         <form method="POST" action="{{ route('admin.enrollments.store') }}" class="grid gap-5 border-t border-ainchors-navy/10 p-5 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_12rem_minmax(14rem,1fr)_auto] xl:items-end">
             @csrf
@@ -45,7 +45,7 @@
                 <input id="enrollment-reason" name="reason" type="text" maxlength="500" required value="{{ old('reason') }}" placeholder="e.g. Corporate training entitlement" class="mt-2 block w-full rounded-ainchors-button border border-ainchors-grey-light/45 px-3.5 py-2.5 text-sm text-ainchors-navy outline-none transition focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25">
                 @error('reason')<p class="mt-1.5 text-sm text-red-700">{{ $message }}</p>@enderror
             </div>
-            <button type="submit" class="rounded-ainchors-button bg-ainchors-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">Grant access</button>
+            <button type="submit" class="rounded-ainchors-button bg-ainchors-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">Add enrollment</button>
         </form>
     </details>
 
@@ -58,7 +58,7 @@
             <label for="enrollments-status" class="block text-sm font-semibold text-ainchors-navy">Status</label>
             <select id="enrollments-status" name="status" class="mt-2 block w-full rounded-ainchors-button border border-ainchors-grey-light/45 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25">
                 <option value="">All statuses</option>
-                @foreach (['active', 'completed', 'expired', 'revoked'] as $status)
+                @foreach (['active', 'expired', 'revoked'] as $status)
                     <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->headline() }}</option>
                 @endforeach
             </select>
@@ -72,9 +72,9 @@
     <section aria-labelledby="enrollments-table-heading" class="overflow-hidden rounded-ainchors-card border border-ainchors-navy/10 bg-white shadow-sm">
         <h2 id="enrollments-table-heading" class="sr-only">Enrollment records</h2>
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[76rem] text-left text-sm">
+            <table class="w-full min-w-[68rem] text-left text-sm">
                 <thead class="border-b border-ainchors-navy/10 bg-slate-50 text-xs uppercase tracking-wide text-ainchors-grey-dark">
-                    <tr><th class="px-5 py-3.5 font-bold">User</th><th class="px-5 py-3.5 font-bold">Course</th><th class="px-5 py-3.5 font-bold">Progress</th><th class="px-5 py-3.5 font-bold">Status</th><th class="px-5 py-3.5 font-bold">Expires</th><th class="px-5 py-3.5 font-bold">Revoke reason</th><th class="px-5 py-3.5 text-right font-bold">Action</th></tr>
+                    <tr><th class="px-5 py-3.5 font-bold">User</th><th class="px-5 py-3.5 font-bold">Course</th><th class="px-5 py-3.5 font-bold">Status</th><th class="px-5 py-3.5 font-bold">Expires</th><th class="px-5 py-3.5 font-bold">Revoke reason</th><th class="px-5 py-3.5 text-right font-bold">Action</th></tr>
                 </thead>
                 <tbody class="divide-y divide-ainchors-navy/8">
                     @forelse ($enrollments as $enrollment)
@@ -82,7 +82,6 @@
                         <tr>
                             <td class="px-5 py-4"><p class="font-semibold text-ainchors-navy">{{ $enrollment->user?->full_name ?? 'User unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $enrollment->user?->email ?? '—' }}</p></td>
                             <td class="px-5 py-4 text-ainchors-navy">{{ $enrollment->product?->name ?? 'Course unavailable' }}</td>
-                            <td class="px-5 py-4 text-ainchors-grey-dark">{{ number_format((float) $enrollment->progress_percent, 0) }}%</td>
                             <td class="px-5 py-4">@include('admin.partials.status-badge', ['status' => $enrollment->status])</td>
                             <td class="px-5 py-4 text-ainchors-grey-dark">{{ $enrollment->expires_at?->format('j M Y') ?? 'No expiry' }}</td>
                             @if ($enrollment->status !== 'revoked')
@@ -103,7 +102,7 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-5 py-12 text-center"><p class="font-semibold text-ainchors-navy">No enrollments match these filters.</p><p class="mt-1 text-sm text-ainchors-grey-dark">Grant a course enrollment to begin.</p></td></tr>
+                        <tr><td colspan="6" class="px-5 py-12 text-center"><p class="font-semibold text-ainchors-navy">No enrollments match these filters.</p><p class="mt-1 text-sm text-ainchors-grey-dark">Grant a course enrollment to begin.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

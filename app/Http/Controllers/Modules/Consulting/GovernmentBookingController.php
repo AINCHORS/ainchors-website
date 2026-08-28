@@ -26,7 +26,7 @@ class GovernmentBookingController extends Controller
 
         $bookings->storeGovernmentBooking($validated, $request->user());
 
-        return to_route('consulting.government.booking')
+        return to_route('consulting.booking')
             ->with('booking_success', 'Thank you. Your booking request has been received.');
     }
 }

@@ -13,11 +13,12 @@ class ContactSubmissionController extends Controller
     public function __invoke(Request $request, ContactSubmissionService $contacts): JsonResponse|RedirectResponse
     {
         $validated = $request->validateWithBag('contact', [
+            'feedback_type' => ['nullable', 'required_if:source,contact_page', 'in:general_enquiry,training_enquiry,consulting_enquiry,course_support,partnership,feedback_complaint'],
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'country' => ['nullable', 'string', 'max:100'],
-            'message' => ['nullable', 'string', 'max:3000'],
+            'message' => ['nullable', 'required_if:source,contact_page', 'string', 'max:3000'],
             'source' => ['nullable', 'in:contact_page,footer'],
         ]);
 

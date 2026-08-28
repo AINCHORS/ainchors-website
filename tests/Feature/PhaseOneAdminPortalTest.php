@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Models\ProductRelation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PhaseOneAdminPortalTest extends TestCase
@@ -83,7 +85,7 @@ class PhaseOneAdminPortalTest extends TestCase
             'lead_id' => $lead->id,
             'status' => 'requested',
             'requested_at' => now(),
-            'source_page' => '/consulting-gov/booking',
+            'source_page' => '/consulting-booking',
         ]);
 
         $this->actingAs($admin)
@@ -151,17 +153,17 @@ class PhaseOneAdminPortalTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.package-members.store', $package), ['course_id' => $first->id])
-            ->assertRedirect(route('admin.products.show', $package));
+            ->assertRedirect(route('admin.package-members.index', $package));
         $this->actingAs($admin)
             ->post(route('admin.package-members.store', $package), ['course_id' => $second->id])
-            ->assertRedirect(route('admin.products.show', $package));
+            ->assertRedirect(route('admin.package-members.index', $package));
 
         $this->assertDatabaseCount('product_relations', 2);
 
         $this->actingAs($admin)
-            ->from(route('admin.products.show', $package))
+            ->from(route('admin.package-members.index', $package))
             ->post(route('admin.package-members.store', $package), ['course_id' => $first->id])
-            ->assertRedirect(route('admin.products.show', $package))
+            ->assertRedirect(route('admin.package-members.index', $package))
             ->assertSessionHasErrors('course_id');
 
         $this->actingAs($admin)
@@ -171,7 +173,7 @@ class PhaseOneAdminPortalTest extends TestCase
                     $second->id => 1,
                 ],
             ])
-            ->assertRedirect(route('admin.products.show', $package));
+            ->assertRedirect(route('admin.package-members.index', $package));
 
         $orderedIds = ProductRelation::query()
             ->where('parent_product_id', $package->id)
@@ -183,7 +185,7 @@ class PhaseOneAdminPortalTest extends TestCase
 
         $this->actingAs($admin)
             ->delete(route('admin.package-members.destroy', [$package, $first]))
-            ->assertRedirect(route('admin.products.show', $package));
+            ->assertRedirect(route('admin.package-members.index', $package));
 
         $this->assertDatabaseMissing('product_relations', [
             'parent_product_id' => $package->id,
@@ -227,6 +229,72 @@ class PhaseOneAdminPortalTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('Manual corporate entitlement.', data_get($audit->after_values, 'manual_reason'));
+    }
+
+    public function test_admin_can_upload_private_course_video_and_slides_without_exposing_them_publicly(): void
+    {
+        Storage::fake('local');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $course = $this->product('uploaded-private-course', 'Uploaded Private Course', 'course', 'draft');
+
+        $this->actingAs($admin)
+            ->get(route('admin.course-content.create', ['product_id' => $course->id]))
+            ->assertOk()
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('Upload course video')
+            ->assertSee('Upload course slides');
+
+        $this->actingAs($admin)
+            ->post(route('admin.course-content.store'), [
+                'product_id' => $course->id,
+                'video_title' => 'Uploaded Private Course Video',
+                'video_provider' => 'Private upload',
+                'video_file' => UploadedFile::fake()->create('lesson.mp4', 100, 'video/mp4'),
+                'slide_name' => 'Uploaded Private Course Slides',
+                'slide_file' => UploadedFile::fake()->create('slides.pdf', 100, 'application/pdf'),
+            ])
+            ->assertRedirect(route('admin.course-content.index'));
+
+        $content = CourseContent::query()->where('product_id', $course->id)->firstOrFail();
+        $this->assertMatchesRegularExpression('#^courses/uploaded-private-course/video/[a-f0-9-]+\\.mp4$#', $content->video_url);
+        $this->assertMatchesRegularExpression('#^courses/uploaded-private-course/slides/[a-f0-9-]+\\.pdf$#', $content->slide_url);
+        $this->assertSame('lesson.mp4', $content->video_original_name);
+        $this->assertSame('slides.pdf', $content->slide_original_name);
+        Storage::disk('local')->assertExists($content->video_url);
+        Storage::disk('local')->assertExists($content->slide_url);
+        $this->assertDatabaseHas('admin_audit_logs', [
+            'action' => 'COURSE_CONTENT_CREATED',
+            'entity_id' => (string) $content->id,
+        ]);
+
+        $learner = User::factory()->create();
+        $this->actingAs($learner)
+            ->get(route('course-media.video', $course))
+            ->assertForbidden();
+        $this->actingAs($learner)
+            ->get(route('admin.course-content.video-preview', $content))
+            ->assertForbidden();
+    }
+
+    public function test_due_enrollment_is_automatically_marked_expired(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $learner = User::factory()->create();
+        $course = $this->configuredCourse('expiring-course', 'Expiring Course');
+        $enrollment = Enrollment::query()->create([
+            'user_id' => $learner->id,
+            'product_id' => $course->id,
+            'status' => 'active',
+            'enrolled_at' => now()->subMonth(),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.enrollments.index'))
+            ->assertOk()
+            ->assertSee('Expired');
+
+        $this->assertSame('expired', $enrollment->fresh()->status);
     }
 
     private function configuredCourse(string $slug, string $name): Product

@@ -37,6 +37,11 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function externalInvoices(): HasMany
+    {
+        return $this->hasMany(ExternalInvoice::class);
+    }
+
     public function workflowAudits(): HasMany
     {
         return $this->hasMany(WorkflowAudit::class);

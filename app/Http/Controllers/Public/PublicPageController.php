@@ -11,6 +11,7 @@ class PublicPageController extends Controller
     private const PAGES = [
         'about' => ['slug' => 'about-us', 'title' => 'About Us | AINCHORS'],
         'trainers' => ['slug' => 'trainers-profile', 'title' => 'Trainer Profiles | AINCHORS'],
+        'fondyFoong' => ['slug' => 'fondy-foong', 'title' => 'Fondy Foong | AINCHORS'],
         'testimonials' => ['slug' => 'testimonials', 'title' => 'Testimonials | AINCHORS'],
         'successStory' => ['slug' => 'success-story-of-angie', 'title' => 'Success Story | AINCHORS'],
         'consultingMain' => ['slug' => 'consulting-main', 'title' => 'Consulting | AINCHORS'],
@@ -21,7 +22,6 @@ class PublicPageController extends Controller
         'contact' => ['slug' => 'contact-us', 'title' => 'Contact Us | AINCHORS'],
         'terms' => ['slug' => 'terms--conditions', 'title' => 'Terms & Conditions | AINCHORS'],
         'privacy' => ['slug' => 'privacy--policy', 'title' => 'Privacy Policy | AINCHORS'],
-        'events' => ['slug' => 'events', 'title' => 'Events | AINCHORS'],
     ];
 
     public function about(): View
@@ -31,6 +31,10 @@ class PublicPageController extends Controller
     public function trainers(): View
     {
         return $this->legacy(self::PAGES['trainers']);
+    }
+    public function fondyFoong(): View
+    {
+        return $this->legacy(self::PAGES['fondyFoong']);
     }
     public function testimonials(): View
     {
@@ -72,11 +76,6 @@ class PublicPageController extends Controller
     {
         return $this->legacy(self::PAGES['privacy']);
     }
-    public function events(): View
-    {
-        return $this->legacy(self::PAGES['events']);
-    }
-
     /** @param array{slug: string, title: string} $page */
     private function legacy(array $page): View
     {
@@ -84,7 +83,7 @@ class PublicPageController extends Controller
             'title' => $page['title'],
             'legacySource' => route('legacy.embedded', [
                 'path' => $page['slug'],
-                'v' => 'external-chat-removed-1',
+                'v' => 'profile-links-6',
             ]),
         ]);
     }

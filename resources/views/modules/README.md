@@ -18,7 +18,6 @@ listed below unchanged.
 | `support/faqs/` | `/faqs` |
 | `support/contact/` | `/contact-us` |
 | `support/careers/` | `/join-us` |
-| `commerce/events/` | `/events` |
 | `commerce/checkout/` | checkout routes |
 | `legal/` | terms and privacy routes |
 

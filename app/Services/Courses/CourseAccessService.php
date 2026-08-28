@@ -8,13 +8,16 @@ use App\Models\User;
 
 class CourseAccessService
 {
+    public function __construct(private readonly EnrollmentService $enrollments) {}
+
     public function activeEnrollment(User $user, Product $product): ?Enrollment
     {
+        $this->enrollments->expireDue($user);
+
         return Enrollment::query()
             ->where('user_id', $user->id)
             ->where('product_id', $product->id)
-            ->whereIn('status', ['active', 'completed'])
-            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->where('status', 'active')
             ->latest('enrolled_at')
             ->first();
     }
