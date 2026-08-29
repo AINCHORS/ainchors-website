@@ -22,7 +22,7 @@
             {{ $badge }}
         </span>
 
-        <h3 class="font-sans font-bold text-ainchors-navy mb-2 text-xl leading-[1.3]">
+        <h3 class="min-h-[3.25rem] font-sans text-xl font-bold leading-[1.3] text-ainchors-navy mb-2">
             {{ $title }}
         </h3>
 

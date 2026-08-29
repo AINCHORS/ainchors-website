@@ -23,11 +23,18 @@
                 <dl class="mt-7 divide-y divide-ainchors-navy/8 text-sm">
                     <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Email</dt><dd class="break-words text-ainchors-navy">{{ $consultation->lead?->email ?? '—' }}</dd></div>
                     <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Phone</dt><dd class="text-ainchors-navy">{{ $consultation->lead?->phone ?: '—' }}</dd></div>
+                    <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Country</dt><dd class="text-ainchors-navy">{{ $consultation->lead?->country ?: '—' }}</dd></div>
                     <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Company</dt><dd class="text-ainchors-navy">{{ $consultation->lead?->company_name ?: '—' }}</dd></div>
+                    <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Consulting type</dt><dd class="text-ainchors-navy">{{ $consultation->consulting_type ? str($consultation->consulting_type)->headline() : 'Not specified' }}</dd></div>
                     <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Source</dt><dd class="text-ainchors-navy">{{ $consultation->source_page ?: ($consultation->lead?->source ?? '—') }}</dd></div>
                     <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Scheduled</dt><dd class="text-ainchors-navy">{{ $consultation->scheduled_at?->format('j M Y, H:i') ?? 'Not scheduled' }}</dd></div>
                     <div class="grid gap-2 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]"><dt class="font-semibold text-ainchors-grey-dark">Assigned</dt><dd class="text-ainchors-navy">{{ $consultation->assignedAdmin?->full_name ?? 'Unassigned' }}</dd></div>
                 </dl>
+
+                <div class="mt-6 border-t border-ainchors-navy/10 pt-6">
+                    <h2 class="font-heading text-xl font-bold text-ainchors-navy">How can we help?</h2>
+                    <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-ainchors-grey-dark">{{ $consultation->lead?->notes ?: 'No requirements were recorded.' }}</p>
+                </div>
 
                 @if (filled($consultation->notes))
                     <div class="mt-6 border-t border-ainchors-navy/10 pt-6">

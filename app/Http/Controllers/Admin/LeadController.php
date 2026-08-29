@@ -14,6 +14,10 @@ use Illuminate\View\View;
 
 class LeadController extends Controller
 {
+    private const CONSULTING_STATUSES = ['new_request', 'contacted', 'consultation_scheduled', 'closed'];
+
+    private const CONTACT_STATUSES = ['new', 'contacted', 'qualified', 'consultation_requested', 'consultation_booked', 'proposal', 'won', 'lost'];
+
     public function __construct(private readonly AuditService $audit) {}
 
     public function index(Request $request): View
@@ -44,7 +48,11 @@ class LeadController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.leads.index', compact('leads'));
+        return view('admin.leads.index-refined', [
+            'leads' => $leads,
+            'consultingStatuses' => self::CONSULTING_STATUSES,
+            'contactStatuses' => self::CONTACT_STATUSES,
+        ]);
     }
 
     public function show(Lead $lead): View
@@ -58,10 +66,16 @@ class LeadController extends Controller
             ->with([
                 'user:id,full_name,email,status',
                 'assignedAdmin:id,full_name,email,status',
+                'consultationRequests' => fn ($query) => $query
+                    ->select(['id', 'lead_id', 'consulting_type', 'status', 'requested_at'])
+                    ->latest('id'),
             ])
             ->findOrFail($lead->getKey());
 
-        return view('admin.leads.show', compact('lead'));
+        return view($lead->source === 'consulting_booking' ? 'admin.leads.show-consulting' : 'admin.leads.show', [
+            'lead' => $lead,
+            'statuses' => $this->statusesFor($lead),
+        ]);
     }
 
     public function update(Request $request, Lead $lead): RedirectResponse
@@ -69,10 +83,7 @@ class LeadController extends Controller
         $data = $request->validate([
             'status' => [
                 'required',
-                Rule::in([
-                    'new', 'contacted', 'qualified', 'consultation_requested',
-                    'consultation_booked', 'proposal', 'won', 'lost',
-                ]),
+                Rule::in($this->statusesFor($lead)),
             ],
         ]);
 
@@ -103,5 +114,13 @@ class LeadController extends Controller
             'status' => $lead->status,
             'assigned_admin_id' => $lead->assigned_admin_id,
         ];
+    }
+
+    /** @return list<string> */
+    private function statusesFor(Lead $lead): array
+    {
+        return $lead->source === 'consulting_booking'
+            ? self::CONSULTING_STATUSES
+            : self::CONTACT_STATUSES;
     }
 }

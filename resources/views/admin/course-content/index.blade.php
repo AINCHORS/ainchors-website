@@ -22,6 +22,30 @@
         <p class="mt-2 max-w-3xl text-sm leading-relaxed text-ainchors-grey-dark">Review each course's private video and slide readiness. Protected storage locations remain hidden.</p>
     </div>
 
+    <form method="GET" action="{{ route('admin.course-content.index') }}" class="mb-6 rounded-ainchors-card border border-ainchors-navy/10 bg-white p-4 shadow-sm" role="search">
+        <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,0.45fr)_auto] md:items-end">
+            <div>
+                <label for="course-content-search" class="block text-sm font-semibold text-ainchors-navy">Search courses</label>
+                <input id="course-content-search" name="q" type="search" value="{{ $search }}" placeholder="Search by course name, SKU or slug" class="mt-2 block w-full rounded-ainchors-button border border-ainchors-grey-light/45 bg-white px-3.5 py-2.5 text-sm text-ainchors-navy shadow-sm outline-none transition placeholder:text-ainchors-grey-dark/65 focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25">
+            </div>
+            <div>
+                <label for="course-content-category" class="block text-sm font-semibold text-ainchors-navy">Course category</label>
+                <select id="course-content-category" name="course_category" class="mt-2 block w-full rounded-ainchors-button border border-ainchors-grey-light/45 bg-white px-3.5 py-2.5 text-sm text-ainchors-navy shadow-sm outline-none transition focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25">
+                    <option value="">All categories</option>
+                    @foreach ($categories as $value => $label)
+                        <option value="{{ $value }}" @selected($category === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" class="rounded-ainchors-button bg-ainchors-green px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green">Filter</button>
+                @if ($search !== '' || $category !== '')
+                    <a href="{{ route('admin.course-content.index') }}" class="rounded-ainchors-button border border-ainchors-navy/15 px-4 py-2.5 text-sm font-semibold text-ainchors-grey-dark transition hover:border-ainchors-green hover:text-ainchors-green">Clear</a>
+                @endif
+            </div>
+        </div>
+    </form>
+
     <section aria-labelledby="course-content-heading">
         <h2 id="course-content-heading" class="sr-only">Course media readiness</h2>
 
@@ -67,8 +91,8 @@
                 </article>
             @empty
                 <div class="rounded-ainchors-card border border-ainchors-navy/10 bg-white px-5 py-12 text-center shadow-sm">
-                    <p class="font-semibold text-ainchors-navy">No course products are available.</p>
-                    <p class="mt-1 text-sm text-ainchors-grey-dark">Create a course product before adding course content.</p>
+                    <p class="font-semibold text-ainchors-navy">{{ $search !== '' || $category !== '' ? 'No courses match these filters.' : 'No course products are available.' }}</p>
+                    <p class="mt-1 text-sm text-ainchors-grey-dark">{{ $search !== '' || $category !== '' ? 'Try another keyword or category.' : 'Create a course product before adding course content.' }}</p>
                 </div>
             @endforelse
         </div>
@@ -119,7 +143,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-5 py-12 text-center"><p class="font-semibold text-ainchors-navy">No course products are available.</p><p class="mt-1 text-sm text-ainchors-grey-dark">Create a course product before adding course content.</p></td></tr>
+                            <tr><td colspan="5" class="px-5 py-12 text-center"><p class="font-semibold text-ainchors-navy">{{ $search !== '' || $category !== '' ? 'No courses match these filters.' : 'No course products are available.' }}</p><p class="mt-1 text-sm text-ainchors-grey-dark">{{ $search !== '' || $category !== '' ? 'Try another keyword or category.' : 'Create a course product before adding course content.' }}</p></td></tr>
                         @endforelse
                     </tbody>
                 </table>

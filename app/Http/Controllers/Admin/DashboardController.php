@@ -90,7 +90,7 @@ class DashboardController extends Controller
             ->get();
 
         $recentConsultations = ConsultationRequest::query()
-            ->select(['id', 'lead_id', 'status', 'requested_at', 'scheduled_at', 'created_at'])
+            ->select(['id', 'lead_id', 'status', 'consulting_type', 'requested_at', 'scheduled_at', 'created_at'])
             ->with('lead:id,full_name,company_name')
             ->latest('id')
             ->limit(6)

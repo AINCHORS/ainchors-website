@@ -9,7 +9,7 @@ class ConsultationRequest extends Model
 {
     protected $fillable = [
         'lead_id', 'workflow_audit_id', 'user_id', 'assigned_admin_id', 'status',
-        'requested_at', 'scheduled_at', 'source_page', 'notes',
+        'requested_at', 'scheduled_at', 'source_page', 'consulting_type', 'notes',
     ];
 
     protected function casts(): array

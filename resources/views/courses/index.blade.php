@@ -38,19 +38,36 @@
             @if ($categoryCourses->isNotEmpty())
                 <section class="course-category" aria-labelledby="course-category-{{ $loop->index }}">
                     <h2 id="course-category-{{ $loop->index }}" class="course-category-heading">{{ $categoryName }}</h2>
-                    <div class="course-grid">
+                    <div class="course-carousel" data-course-carousel aria-label="{{ $categoryName }} carousel">
+                        <div class="course-carousel-viewport" data-carousel-viewport tabindex="0">
+                            <div class="course-carousel-track" data-carousel-track>
                         @foreach ($categoryCourses as $course)
                             @php($owned = in_array($course->id, $ownedCourseIds, true))
-                            <x-course-card
-                                :image="asset($course->image)"
-                                :title="$course->name"
-                                :description="$course->short_description"
-                                :price-original="number_format($course->listPrice(), 0)"
-                                :price-current="number_format((float) $course->price, 0)"
-                                :href="$owned ? route('learn.show', $course) : route('courses.show', $course)"
-                                :button-label="$owned ? 'Access Course' : 'View Course'"
-                            />
+                                    <div class="course-carousel-item" data-carousel-card>
+                                        <x-course-card
+                                            :image="$course->image ? asset($course->image) : null"
+                                            :title="$course->name"
+                                            :description="$course->short_description"
+                                            :price-original="number_format($course->listPrice(), 0)"
+                                            :price-current="number_format((float) $course->price, 0)"
+                                            :href="$owned ? route('learn.show', $course) : route('courses.show', $course)"
+                                            :button-label="$owned ? 'Access Course' : 'View Course'"
+                                        />
+                                    </div>
                         @endforeach
+                            </div>
+                        </div>
+
+                        <div class="course-carousel-navigation" data-carousel-navigation hidden>
+                            <button type="button" class="course-carousel-arrow course-carousel-previous" data-carousel-previous aria-label="Previous courses">
+                                <span aria-hidden="true">←</span>
+                            </button>
+                            <div class="course-carousel-pagination" data-carousel-pagination aria-label="Course carousel pagination"></div>
+                            <button type="button" class="course-carousel-arrow course-carousel-next" data-carousel-next aria-label="Next courses">
+                                <span aria-hidden="true">→</span>
+                            </button>
+                        </div>
+                        <p class="sr-only" data-carousel-status aria-live="polite"></p>
                     </div>
                 </section>
             @endif

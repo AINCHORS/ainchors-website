@@ -120,8 +120,10 @@ class PublicSiteIntegrationTest extends TestCase
         $this->get(route('legacy.embedded', ['path' => 'trainers-profile']))
             ->assertOk()
             ->assertSee('overflow-y:hidden!important', false)
-            ->assertSee('observer.observe(document.documentElement)', false)
-            ->assertSee('observer.observe(document.body)', false);
+            ->assertSee('resizeObserver.observe(document.documentElement)', false)
+            ->assertSee('resizeObserver.observe(document.body)', false)
+            ->assertSee('Math.abs(height-lastHeight)<2', false)
+            ->assertSee('mutationObserver.observe(document.body', false);
     }
 
     public function test_angie_foong_uses_a_dedicated_local_founder_background_page(): void
@@ -158,7 +160,8 @@ class PublicSiteIntegrationTest extends TestCase
             ->assertSee(route('fondy-foong'), false)
             ->assertSee('button-1YxNJRczNr_btn', false)
             ->assertSee('background:#e8fff7!important', false)
-            ->assertSee('button-IIjIZEpKRo_btn:hover', false);
+            ->assertSee('button-IIjIZEpKRo_btn:hover', false)
+            ->assertSee('window.parent.scrollTo({top:0,behavior:"smooth"})', false);
 
         $this->get(route('fondy-foong'))
             ->assertOk()

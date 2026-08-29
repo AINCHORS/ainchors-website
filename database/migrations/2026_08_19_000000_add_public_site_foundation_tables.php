@@ -30,8 +30,9 @@ return new class extends Migration
                 $table->string('full_name');
                 $table->string('email')->index();
                 $table->string('phone', 50)->nullable();
+                $table->string('country', 100)->nullable();
                 $table->string('company_name')->nullable();
-                $table->enum('status', ['new', 'contacted', 'qualified', 'consultation_requested', 'consultation_booked', 'proposal', 'won', 'lost'])->default('new')->index();
+                $table->enum('status', ['new', 'contacted', 'qualified', 'consultation_requested', 'consultation_booked', 'proposal', 'won', 'lost', 'new_request', 'consultation_scheduled', 'closed'])->default('new')->index();
                 $table->unsignedBigInteger('assigned_admin_id')->nullable()->index();
                 $table->text('notes')->nullable();
                 $table->timestamps();

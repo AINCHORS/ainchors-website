@@ -10,7 +10,7 @@ class Lead extends Model
 {
     protected $fillable = [
         'user_id', 'visitor_id', 'workflow_audit_id', 'source', 'full_name',
-        'email', 'phone', 'company_name', 'status', 'assigned_admin_id', 'notes',
+        'email', 'phone', 'country', 'company_name', 'status', 'assigned_admin_id', 'notes',
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }

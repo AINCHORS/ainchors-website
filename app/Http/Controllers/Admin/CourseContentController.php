@@ -24,9 +24,11 @@ class CourseContentController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->input('q', ''));
+        $category = (string) $request->input('course_category', '');
+        $category = array_key_exists($category, Product::COURSE_CATEGORIES) ? $category : '';
 
         $courses = Product::query()
-            ->select(['id', 'name', 'slug', 'sku', 'status', 'created_at', 'updated_at'])
+            ->select(['id', 'name', 'slug', 'sku', 'course_category', 'status', 'created_at', 'updated_at'])
             ->where('type', 'course')
             ->with($this->safeCourseContentRelation())
             ->when($search !== '', function ($query) use ($search): void {
@@ -37,6 +39,7 @@ class CourseContentController extends Controller
                         ->orWhere('slug', 'like', "%{$search}%");
                 });
             })
+            ->when($category !== '', fn ($query) => $query->where('course_category', $category))
             ->orderBy('sku')
             ->paginate(20)
             ->withQueryString();
@@ -59,7 +62,9 @@ class CourseContentController extends Controller
             return [$course->id => compact('video', 'slides')];
         });
 
-        return view('admin.course-content.index', compact('courses', 'mediaByCourse'));
+        $categories = Product::COURSE_CATEGORIES;
+
+        return view('admin.course-content.index', compact('courses', 'mediaByCourse', 'categories', 'search', 'category'));
     }
 
     public function create(Request $request): View
@@ -250,14 +255,79 @@ class CourseContentController extends Controller
     /** @return array<string, mixed> */
     private function validatedMetadata(Request $request, bool $creating = false): array
     {
-        return Arr::except($request->validate([
+        $data = Arr::except($request->validate([
             'video_title' => ['required', 'string', 'max:255'],
             'video_duration_seconds' => ['nullable', 'integer', 'min:0'],
             'slide_name' => ['nullable', 'string', 'max:255'],
             'lesson_content' => ['nullable', 'array'],
-            'video_file' => [$creating ? 'required' : 'nullable', 'file', 'mimetypes:video/mp4', 'max:1048576'],
-            'slide_file' => ['nullable', 'file', 'mimes:pdf,ppt,pptx', 'max:51200'],
+            'lesson_content.start' => ['nullable', 'array'],
+            'lesson_content.start.title' => ['nullable', 'string', 'max:255'],
+            'lesson_content.start.body' => ['nullable', 'string', 'max:5000'],
+            'lesson_content.start.objectives' => ['nullable', 'array'],
+            'lesson_content.start.objectives.*' => ['nullable', 'string', 'max:1000'],
+            'lesson_content.full' => ['nullable', 'array'],
+            'lesson_content.full.title' => ['nullable', 'string', 'max:255'],
+            'lesson_content.full.body' => ['nullable', 'string', 'max:5000'],
+            'lesson_content.full.topics' => ['nullable', 'array'],
+            'lesson_content.full.topics.*' => ['nullable', 'string', 'max:1000'],
+            'lesson_content.recap' => ['nullable', 'array'],
+            'lesson_content.recap.title' => ['nullable', 'string', 'max:255'],
+            'lesson_content.recap.body' => ['nullable', 'string', 'max:5000'],
+            'lesson_content.recap.takeaways' => ['nullable', 'array'],
+            'lesson_content.recap.takeaways.*' => ['nullable', 'string', 'max:1000'],
+            'lesson_content.recap.next_steps' => ['nullable', 'array'],
+            'lesson_content.recap.next_steps.*' => ['nullable', 'string', 'max:1000'],
+            'video_file' => [$creating ? 'required' : 'nullable', 'file', 'mimetypes:video/mp4', 'max:65536'],
+            'slide_file' => [
+                'nullable',
+                'file',
+                'extensions:pdf,ppt,pptx',
+                'mimetypes:application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,application/octet-stream',
+                'max:51200',
+            ],
+        ], [
+            'video_file.uploaded' => 'The video could not be uploaded. Use an MP4 file no larger than 64 MB.',
+            'video_file.max' => 'The video must not be larger than 64 MB.',
+            'video_file.mimetypes' => 'The video must be an MP4 file.',
+            'slide_file.uploaded' => 'The slide deck could not be uploaded. Use a PDF, PPT or PPTX file no larger than 50 MB.',
+            'slide_file.extensions' => 'The slide deck must use a PDF, PPT or PPTX file extension.',
+            'slide_file.mimetypes' => 'The slide deck must be a valid PDF, PPT or PPTX file.',
+            'slide_file.max' => 'The slide deck must not be larger than 50 MB.',
         ]), ['video_file', 'slide_file']);
+
+        if (array_key_exists('lesson_content', $data)) {
+            $data['lesson_content'] = $this->normalizeLessonContent($data['lesson_content'] ?? []);
+        }
+
+        return $data;
+    }
+
+    /** @param array<string, mixed> $lessonContent */
+    private function normalizeLessonContent(array $lessonContent): array
+    {
+        $normalized = [];
+
+        foreach ([
+            'start' => ['objectives'],
+            'full' => ['topics'],
+            'recap' => ['takeaways', 'next_steps'],
+        ] as $section => $lists) {
+            $input = is_array($lessonContent[$section] ?? null) ? $lessonContent[$section] : [];
+            $normalized[$section] = [
+                'title' => trim((string) ($input['title'] ?? '')),
+                'body' => trim((string) ($input['body'] ?? '')),
+            ];
+
+            foreach ($lists as $list) {
+                $items = is_array($input[$list] ?? null) ? $input[$list] : [];
+                $normalized[$section][$list] = array_values(array_filter(
+                    array_map(static fn (mixed $item): string => trim((string) $item), $items),
+                    static fn (string $item): bool => $item !== '',
+                ));
+            }
+        }
+
+        return $normalized;
     }
 
     /** @return array<string, int|string> */
@@ -329,6 +399,30 @@ class CourseContentController extends Controller
             'slides_configured' => array_key_exists('slide_url', $courseContent->getAttributes())
                 ? filled($courseContent->getAttribute('slide_url'))
                 : CourseContent::query()->whereKey($courseContent->getKey())->whereNotNull('slide_url')->where('slide_url', '!=', '')->exists(),
+            'lesson_content' => $this->lessonContentAuditSummary($courseContent->lesson_content),
+        ];
+    }
+
+    /** @param array<string, mixed>|null $lessonContent */
+    private function lessonContentAuditSummary(?array $lessonContent): array
+    {
+        return [
+            'start' => [
+                'title' => data_get($lessonContent, 'start.title'),
+                'body_present' => filled(data_get($lessonContent, 'start.body')),
+                'objectives_count' => count((array) data_get($lessonContent, 'start.objectives', [])),
+            ],
+            'full' => [
+                'title' => data_get($lessonContent, 'full.title'),
+                'body_present' => filled(data_get($lessonContent, 'full.body')),
+                'topics_count' => count((array) data_get($lessonContent, 'full.topics', [])),
+            ],
+            'recap' => [
+                'title' => data_get($lessonContent, 'recap.title'),
+                'body_present' => filled(data_get($lessonContent, 'recap.body')),
+                'takeaways_count' => count((array) data_get($lessonContent, 'recap.takeaways', [])),
+                'next_steps_count' => count((array) data_get($lessonContent, 'recap.next_steps', [])),
+            ],
         ];
     }
 

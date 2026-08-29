@@ -157,7 +157,7 @@
             <div class="flex items-center justify-between gap-3"><h2 class="font-heading text-xl font-bold text-ainchors-navy">Recent consultations</h2><a href="{{ route('admin.consultations.index') }}" class="text-sm font-semibold text-ainchors-green hover:text-ainchors-navy">View all</a></div>
             <div class="mt-4 divide-y divide-ainchors-navy/8">
                 @forelse ($recentConsultations as $consultation)
-                    <a href="{{ route('admin.consultations.show', $consultation) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $consultation->lead?->full_name ?? 'Lead unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $consultation->lead?->company_name ?: 'No company' }}</p></div><span class="text-xs font-semibold text-ainchors-grey-dark">{{ str($consultation->status)->replace('_', ' ')->headline() }}</span></a>
+                    <a href="{{ route('admin.consultations.show', $consultation) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $consultation->lead?->full_name ?? 'Lead unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $consultation->lead?->company_name ?: 'No company' }} · {{ $consultation->consulting_type ? str($consultation->consulting_type)->headline() : 'Type not specified' }}</p></div><span class="text-xs font-semibold text-ainchors-grey-dark">{{ str($consultation->status)->replace('_', ' ')->headline() }}</span></a>
                 @empty
                     <p class="py-8 text-center text-sm text-ainchors-grey-dark">No consultations recorded.</p>
                 @endforelse

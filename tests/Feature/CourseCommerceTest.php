@@ -465,6 +465,7 @@ class CourseCommerceTest extends TestCase
         $course = $this->course();
         Storage::disk('local')->put('courses/'.$course->slug.'/video/course.mp4', '0123456789');
         Storage::disk('local')->put('courses/'.$course->slug.'/slides/course-slides.pptx', 'pptx-test');
+        $course->courseContent()->update(['slide_name' => 'Board Strategy Deck']);
         $user = User::factory()->create();
 
         $this->actingAs($user)->get(route('course-media.video', $course))->assertForbidden();
@@ -473,7 +474,9 @@ class CourseCommerceTest extends TestCase
         Enrollment::query()->create(['user_id' => $user->id, 'product_id' => $course->id, 'status' => 'active', 'enrolled_at' => now()]);
         $this->actingAs($user)->call('GET', route('course-media.video', $course), server: ['HTTP_RANGE' => 'bytes=0-3'])
             ->assertStatus(206)->assertHeader('Content-Range', 'bytes 0-3/10');
-        $this->actingAs($user)->get(route('course-media.slides', $course))->assertOk();
+        $this->actingAs($user)->get(route('course-media.slides', $course))
+            ->assertOk()
+            ->assertDownload('Board-Strategy-Deck.pptx');
         $this->assertFalse(file_exists(public_path('storage/courses/'.$course->slug.'/video/course.mp4')));
     }
 
@@ -486,6 +489,33 @@ class CourseCommerceTest extends TestCase
 
         $this->actingAs($user)->get(route('my-courses'))
             ->assertOk()->assertSee($owned->name)->assertDontSee($other->name)->assertDontSee($this->package()->name);
+    }
+
+    public function test_my_courses_uses_category_filter_without_a_search_field(): void
+    {
+        $user = User::factory()->create();
+        $selfTraining = $this->course();
+        $digitalMoney = Product::query()->where('type', 'course')->whereKeyNot($selfTraining->id)->firstOrFail();
+        $selfTraining->update(['course_category' => 'self_training']);
+        $digitalMoney->update(['course_category' => 'digital_money_mastery']);
+
+        foreach ([$selfTraining, $digitalMoney] as $course) {
+            Enrollment::query()->create([
+                'user_id' => $user->id,
+                'product_id' => $course->id,
+                'status' => 'active',
+                'enrolled_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('my-courses', ['course_category' => 'self_training']))
+            ->assertOk()
+            ->assertSee('Course category')
+            ->assertSee($selfTraining->name)
+            ->assertDontSee($digitalMoney->name)
+            ->assertDontSee('name="q"', false)
+            ->assertSee('value="self_training" selected', false);
     }
 
     public function test_catalogue_has_only_canonical_active_names_slugs_and_package_relations(): void

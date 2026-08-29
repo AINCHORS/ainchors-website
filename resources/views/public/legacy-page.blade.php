@@ -18,7 +18,10 @@
         window.addEventListener('message', function (event) {
             if (event.origin !== window.location.origin || event.data?.source !== 'ainchors-legacy' || event.data?.type !== 'height') return;
             const frame = document.getElementById('legacy-page-frame');
-            if (frame && Number.isFinite(event.data.height)) frame.style.height = Math.max(900, event.data.height) + 'px';
+            if (frame && Number.isFinite(event.data.height)) {
+                const nextHeight = Math.max(900, Math.ceil(event.data.height));
+                if (Math.abs(frame.getBoundingClientRect().height - nextHeight) >= 2) frame.style.height = nextHeight + 'px';
+            }
         });
     </script>
 @endsection

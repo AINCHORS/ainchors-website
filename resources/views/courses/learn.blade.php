@@ -7,8 +7,11 @@
 <section class="learning-section">
     <div class="site-shell learning-layout">
         @php($lesson = $content?->lesson_content ?? [])
+        @php($startNavTitle = preg_replace('/^\s*01\s*/', '', (string) data_get($lesson, 'start.title', 'Start Here')) ?: 'Start Here')
+        @php($fullNavTitle = preg_replace('/^\s*02\s*/', '', (string) data_get($lesson, 'full.title', 'Full Course')) ?: 'Full Course')
+        @php($recapNavTitle = preg_replace('/^\s*03\s*/', '', (string) data_get($lesson, 'recap.title', 'Course Recap & Next Steps')) ?: 'Course Recap & Next Steps')
         <nav class="lesson-nav" aria-label="Course sections">
-            <a href="#start">01 Start Here</a><a href="#full-course">02 Full Course</a><a href="#recap">03 Course Recap &amp; Next Steps</a>
+            <a href="#start">01 {{ $startNavTitle }}</a><a href="#full-course">02 {{ $fullNavTitle }}</a><a href="#recap">03 {{ $recapNavTitle }}</a>
         </nav>
         <div class="lesson-content">
             <article id="start" class="lesson-panel">
@@ -23,7 +26,12 @@
                 @else
                     <div class="asset-unavailable">Course video coming soon</div>
                 @endif
-                @if ($slidesAvailable)<a class="secondary-button" href="{{ route('course-media.slides', $course) }}">Download Course Slides</a>@endif
+                @if ($slidesAvailable)
+                    <div class="course-slides-download">
+                        <p>{{ $content->slide_name ?: 'Course Slides' }}</p>
+                        <a class="secondary-button" href="{{ route('course-media.slides', $course) }}">Download Course Slides</a>
+                    </div>
+                @endif
             </article>
             <article id="recap" class="lesson-panel">
                 <span>03</span><h2>{{ data_get($lesson, 'recap.title', '03 Course Recap & Next Steps') }}</h2><p>{{ data_get($lesson, 'recap.body') }}</p>

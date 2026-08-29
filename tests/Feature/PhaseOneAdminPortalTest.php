@@ -79,19 +79,39 @@ class PhaseOneAdminPortalTest extends TestCase
             'full_name' => 'Government Client',
             'email' => 'client@example.test',
             'company_name' => 'Public Agency',
-            'status' => 'consultation_requested',
+            'status' => 'new_request',
+            'notes' => 'We need guidance on a regulator training programme.',
         ]);
         $consultation = ConsultationRequest::query()->create([
             'lead_id' => $lead->id,
             'status' => 'requested',
             'requested_at' => now(),
             'source_page' => '/consulting-booking',
+            'consulting_type' => 'government',
         ]);
 
         $this->actingAs($admin)
             ->get(route('admin.consultations.index'))
             ->assertOk()
-            ->assertSee('Government Client');
+            ->assertSee('Government Client')
+            ->assertSee('Government');
+
+        $this->actingAs($admin)
+            ->get(route('admin.consultations.show', $consultation))
+            ->assertOk()
+            ->assertSee('Consulting type')
+            ->assertSee('Government');
+
+        $this->actingAs($admin)
+            ->get(route('admin.leads.show', $lead))
+            ->assertOk()
+            ->assertSee('Government Consultation Request')
+            ->assertSee('Consulting Type')
+            ->assertSee('Government Consulting')
+            ->assertSee('Requirements')
+            ->assertSee('We need guidance on a regulator training programme.')
+            ->assertSee('Request Status')
+            ->assertSee(route('admin.consultations.show', $consultation), false);
 
         $scheduledAt = now()->addDay()->startOfHour();
 
@@ -110,7 +130,7 @@ class PhaseOneAdminPortalTest extends TestCase
         $this->assertSame('booked', $consultation->status);
         $this->assertSame($admin->id, $consultation->assigned_admin_id);
         $this->assertNotNull($consultation->scheduled_at);
-        $this->assertSame('consultation_booked', $lead->status);
+        $this->assertSame('consultation_scheduled', $lead->status);
         $this->assertDatabaseHas('admin_audit_logs', [
             'action' => 'CONSULTATION_UPDATED',
             'entity_id' => (string) $consultation->id,
@@ -119,6 +139,55 @@ class PhaseOneAdminPortalTest extends TestCase
             'action' => 'LEAD_STATUS_CHANGED',
             'entity_id' => (string) $lead->id,
         ]);
+    }
+
+    public function test_consulting_request_uses_only_the_four_internal_request_statuses(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $lead = Lead::query()->create([
+            'source' => 'consulting_booking',
+            'full_name' => 'Status Client',
+            'email' => 'status-client@example.test',
+            'status' => 'new_request',
+        ]);
+
+        foreach (['new_request', 'contacted', 'consultation_scheduled', 'closed'] as $status) {
+            $this->actingAs($admin)
+                ->put(route('admin.leads.update', $lead), ['status' => $status])
+                ->assertRedirect(route('admin.leads.show', $lead));
+
+            $this->assertSame($status, $lead->fresh()->status);
+        }
+
+        $this->assertDatabaseHas('admin_audit_logs', [
+            'action' => 'LEAD_STATUS_CHANGED',
+            'entity_id' => (string) $lead->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.leads.show', $lead))
+            ->put(route('admin.leads.update', $lead), ['status' => 'proposal'])
+            ->assertRedirect(route('admin.leads.show', $lead))
+            ->assertSessionHasErrors(['status']);
+
+        $this->assertSame('closed', $lead->fresh()->status);
+    }
+
+    public function test_non_admin_cannot_update_a_consulting_request_status(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        $lead = Lead::query()->create([
+            'source' => 'consulting_booking',
+            'full_name' => 'Protected Request',
+            'email' => 'protected-request@example.test',
+            'status' => 'new_request',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('admin.leads.update', $lead), ['status' => 'contacted'])
+            ->assertForbidden();
+
+        $this->assertSame('new_request', $lead->fresh()->status);
     }
 
     public function test_audit_viewer_re_redacts_sensitive_historical_values(): void

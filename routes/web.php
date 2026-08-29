@@ -71,10 +71,11 @@ Route::post('/contact-submissions', ContactSubmissionController::class)->name('c
 Route::post('/payments/stripe/webhook', [PaymentWebhookController::class, 'stripe'])->name('payments.stripe.webhook');
 Route::post('/payments/paypal/webhook', [PaymentWebhookController::class, 'paypal'])->name('payments.paypal.webhook');
 
-Route::redirect('/boooking-page', '/consulting-booking', 301)->name('consulting.booking.legacy');
-Route::redirect('/booking-page', '/consulting-booking', 301)->name('consulting.booking.legacy-alias');
-Route::redirect('/consulting-gov/booking', '/consulting-booking', 301)->name('consulting.booking.government-legacy');
-Route::redirect('/consulting-private/booking', '/consulting-booking', 301)->name('consulting.booking.private-legacy');
+Route::redirect('/boooking-page', '/consulting-main', 301)->name('consulting.booking.legacy');
+Route::redirect('/booking-page', '/consulting-main', 301)->name('consulting.booking.legacy-alias');
+Route::redirect('/consulting-gov/booking', '/consulting-gov', 301)->name('consulting.booking.government-legacy');
+Route::redirect('/consulting-private/booking', '/consulting-private', 301)->name('consulting.booking.private-legacy');
+Route::post('/consulting-booking/select', [GovernmentBookingController::class, 'select'])->name('consulting.booking.select');
 Route::get('/consulting-booking', [GovernmentBookingController::class, 'create'])->name('consulting.booking');
 Route::post('/consulting-booking', [GovernmentBookingController::class, 'store'])->name('consulting.booking.store');
 

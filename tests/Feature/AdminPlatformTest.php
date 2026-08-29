@@ -575,6 +575,37 @@ class AdminPlatformTest extends TestCase
         $this->assertSame('active', $course->fresh()->status);
     }
 
+    public function test_admin_can_search_and_filter_the_course_content_list_by_category(): void
+    {
+        $admin = $this->admin();
+        $selfTraining = $this->product('prompt-engineering', 'Prompt Engineering Essentials');
+        $selfTraining->update(['course_category' => 'self_training']);
+        $digitalMoney = $this->product('payment-systems', 'Modern Payment Systems');
+        $digitalMoney->update(['course_category' => 'digital_money_mastery']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.course-content.index'))
+            ->assertOk()
+            ->assertSee('Search courses')
+            ->assertSee('Course category')
+            ->assertSee('Self Training Courses')
+            ->assertSee('Digital Money Mastery');
+
+        $this->actingAs($admin)
+            ->get(route('admin.course-content.index', ['q' => 'Prompt', 'course_category' => 'self_training']))
+            ->assertOk()
+            ->assertSee('Prompt Engineering Essentials')
+            ->assertDontSee('Modern Payment Systems')
+            ->assertSee('value="Prompt"', false)
+            ->assertSee('value="self_training" selected', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.course-content.index', ['course_category' => 'digital_money_mastery']))
+            ->assertOk()
+            ->assertSee('Modern Payment Systems')
+            ->assertDontSee('Prompt Engineering Essentials');
+    }
+
     public function test_orders_and_payments_are_inspectable_but_have_no_mutation_routes(): void
     {
         $admin = $this->admin();

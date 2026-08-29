@@ -37,6 +37,7 @@
                     <tr>
                         <th class="px-5 py-3.5 font-bold">Contact</th>
                         <th class="px-5 py-3.5 font-bold">Company</th>
+                        <th class="px-5 py-3.5 font-bold">Consulting type</th>
                         <th class="px-5 py-3.5 font-bold">Requested</th>
                         <th class="px-5 py-3.5 font-bold">Scheduled</th>
                         <th class="px-5 py-3.5 font-bold">Status</th>
@@ -49,6 +50,7 @@
                         <tr>
                             <td class="px-5 py-4"><p class="font-semibold text-ainchors-navy">{{ $consultation->lead?->full_name ?? 'Lead unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $consultation->lead?->email ?? '—' }}</p></td>
                             <td class="px-5 py-4 text-ainchors-grey-dark">{{ $consultation->lead?->company_name ?: '—' }}</td>
+                            <td class="px-5 py-4 text-ainchors-grey-dark">{{ $consultation->consulting_type ? str($consultation->consulting_type)->headline() : 'Not specified' }}</td>
                             <td class="px-5 py-4 text-ainchors-grey-dark">{{ $consultation->requested_at?->format('j M Y, H:i') ?? '—' }}</td>
                             <td class="px-5 py-4 text-ainchors-grey-dark">{{ $consultation->scheduled_at?->format('j M Y, H:i') ?? 'Not scheduled' }}</td>
                             <td class="px-5 py-4">@include('admin.partials.status-badge', ['status' => $consultation->status])</td>
@@ -56,7 +58,7 @@
                             <td class="px-5 py-4 text-right"><a href="{{ route('admin.consultations.show', $consultation) }}" class="font-semibold text-ainchors-green hover:text-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green">View</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="px-5 py-12 text-center"><p class="font-semibold text-ainchors-navy">No consultation requests match these filters.</p><p class="mt-1 text-sm text-ainchors-grey-dark">Public booking requests will appear here.</p></td></tr>
+                        <tr><td colspan="8" class="px-5 py-12 text-center"><p class="font-semibold text-ainchors-navy">No consultation requests match these filters.</p><p class="mt-1 text-sm text-ainchors-grey-dark">Public booking requests will appear here.</p></td></tr>
                     @endforelse
                 </tbody>
             </table>

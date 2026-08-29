@@ -28,6 +28,7 @@ class ConsultationController extends Controller
             ->select([
                 'id', 'lead_id', 'user_id', 'assigned_admin_id', 'status',
                 'requested_at', 'scheduled_at', 'source_page', 'created_at', 'updated_at',
+                'consulting_type',
             ])
             ->with([
                 'lead:id,full_name,email,phone,company_name,status,source',
@@ -37,6 +38,7 @@ class ConsultationController extends Controller
                 $query->where(function ($searchQuery) use ($search): void {
                     $searchQuery
                         ->where('source_page', 'like', "%{$search}%")
+                        ->orWhere('consulting_type', 'like', "%{$search}%")
                         ->orWhereHas('lead', function ($leadQuery) use ($search): void {
                             $leadQuery
                                 ->where('full_name', 'like', "%{$search}%")
@@ -63,7 +65,7 @@ class ConsultationController extends Controller
         $consultation = ConsultationRequest::query()
             ->select([
                 'id', 'lead_id', 'workflow_audit_id', 'user_id', 'assigned_admin_id',
-                'status', 'requested_at', 'scheduled_at', 'source_page', 'notes',
+                'status', 'requested_at', 'scheduled_at', 'source_page', 'consulting_type', 'notes',
                 'created_at', 'updated_at',
             ])
             ->with([
@@ -132,12 +134,12 @@ class ConsultationController extends Controller
         }
 
         $target = match ($consultationStatus) {
-            'requested' => 'consultation_requested',
-            'booked' => 'consultation_booked',
-            default => null,
+            'requested' => 'new_request',
+            'booked' => 'consultation_scheduled',
+            'completed', 'cancelled', 'no_show' => 'closed',
         };
 
-        if ($target === null || $lead->status === $target) {
+        if ($lead->status === $target) {
             return;
         }
 
@@ -170,6 +172,7 @@ class ConsultationController extends Controller
             'requested_at' => $consultation->requested_at?->toAtomString(),
             'scheduled_at' => $consultation->scheduled_at?->toAtomString(),
             'source_page' => $consultation->source_page,
+            'consulting_type' => $consultation->consulting_type,
             'notes_present' => filled($consultation->notes),
         ];
     }

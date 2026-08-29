@@ -12,7 +12,7 @@ class ConsultationBookingService
     public const BOOKING_SOURCE_PAGE = '/consulting-booking';
 
     /**
-     * @param array{full_name: string, email: string, phone: string, company_name?: string|null} $submission
+     * @param array{full_name: string, email: string, phone: string, country: string, company_name?: string|null, requirements: string, consulting_type: 'government'|'private'} $submission
      */
     public function storeGovernmentBooking(array $submission, ?User $user = null): ConsultationRequest
     {
@@ -23,8 +23,10 @@ class ConsultationBookingService
                 'full_name' => $submission['full_name'],
                 'email' => $submission['email'],
                 'phone' => $submission['phone'],
+                'country' => $submission['country'],
                 'company_name' => $submission['company_name'] ?? null,
-                'status' => 'consultation_requested',
+                'status' => 'new_request',
+                'notes' => $submission['requirements'],
             ]);
 
             return ConsultationRequest::query()->create([
@@ -33,6 +35,7 @@ class ConsultationBookingService
                 'status' => 'requested',
                 'requested_at' => now(),
                 'source_page' => self::BOOKING_SOURCE_PAGE,
+                'consulting_type' => $submission['consulting_type'],
             ]);
         });
     }

@@ -31,7 +31,11 @@ class CourseMediaController extends Controller
         $content = $this->authorizedContent($request, $course);
         $path = $this->safeAssetPath($course, $content->slide_url, 'slides', ['pdf', 'ppt', 'pptx']);
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $filename = Str::of($course->name)->ascii()->replaceMatches('/[^A-Za-z0-9]+/', '-')->trim('-').'-Course-Slides.'.$extension;
+        $downloadName = Str::of($content->slide_name ?: $course->name.' Course Slides')
+            ->ascii()
+            ->replaceMatches('/[^A-Za-z0-9]+/', '-')
+            ->trim('-');
+        $filename = ($downloadName->isNotEmpty() ? $downloadName : Str::of($course->slug.'-Course-Slides')).'.'.$extension;
         $contentType = match ($extension) {
             'pdf' => 'application/pdf',
             'ppt' => 'application/vnd.ms-powerpoint',
