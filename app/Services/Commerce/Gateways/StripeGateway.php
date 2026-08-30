@@ -3,6 +3,7 @@
 namespace App\Services\Commerce\Gateways;
 
 use App\Models\Order;
+use App\Models\Payment;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -14,8 +15,12 @@ class StripeGateway
     {
         $secret = (string) config('commerce.payment.stripe.secret');
 
-        return config('commerce.payment.environment') === 'sandbox'
-            && str_starts_with($secret, 'sk_test_');
+        $environment = Payment::inferEnvironment('stripe', null, [
+            'environment' => config('commerce.payment.environment'),
+        ]);
+
+        return ($environment === 'test' && (str_starts_with($secret, 'rk_test_') || str_starts_with($secret, 'sk_test_')))
+            || ($environment === 'live' && (str_starts_with($secret, 'rk_live_') || str_starts_with($secret, 'sk_live_')));
     }
 
     /** @return array<string, mixed> */
@@ -36,6 +41,7 @@ class StripeGateway
                     'cancel_url' => route('payments.cancel', ['order' => $order, 'provider' => 'stripe']),
                     'metadata' => ['order_number' => $order->order_number],
                     'payment_intent_data' => ['metadata' => ['order_number' => $order->order_number]],
+                    'invoice_creation' => ['enabled' => 'true'],
                     'line_items' => [[
                         'quantity' => 1,
                         'price_data' => [
@@ -61,13 +67,32 @@ class StripeGateway
     public function retrieveSession(string $sessionId): array
     {
         try {
-            $response = $this->client()->get($this->apiUrl('/v1/checkout/sessions/'.rawurlencode($sessionId)));
+            $response = $this->client()->get(
+                $this->apiUrl('/v1/checkout/sessions/'.rawurlencode($sessionId)),
+                ['expand' => ['invoice']],
+            );
         } catch (Throwable $exception) {
             throw new RuntimeException('Stripe could not verify this payment.', previous: $exception);
         }
 
         if (! $response->successful()) {
             throw new RuntimeException('Stripe could not verify this payment.');
+        }
+
+        return $response->json();
+    }
+
+    /** @return array<string, mixed> */
+    public function retrieveInvoice(string $invoiceId): array
+    {
+        try {
+            $response = $this->client()->get($this->apiUrl('/v1/invoices/'.rawurlencode($invoiceId)));
+        } catch (Throwable $exception) {
+            throw new RuntimeException('Stripe could not retrieve the invoice.', previous: $exception);
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Stripe could not retrieve the invoice.');
         }
 
         return $response->json();
@@ -112,7 +137,7 @@ class StripeGateway
     {
         $secret = (string) config('commerce.payment.stripe.secret');
         if (! $this->configured()) {
-            throw new RuntimeException('Stripe Sandbox is not configured with a test secret key.');
+            throw new RuntimeException('Stripe is not configured with a key matching PAYMENT_ENVIRONMENT.');
         }
 
         return Http::acceptJson()->withToken($secret)->timeout(20)->retry(2, 200);

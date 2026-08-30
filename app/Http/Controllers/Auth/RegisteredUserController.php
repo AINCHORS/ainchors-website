@@ -21,14 +21,18 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'full_name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'terms' => ['accepted'],
         ]);
 
+        $nameParts = preg_split('/\s+/', trim($validated['full_name']), 2) ?: [];
+
         $user = User::query()->create([
-            'full_name' => $validated['name'],
+            'first_name' => $nameParts[0] ?? null,
+            'last_name' => $nameParts[1] ?? null,
+            'full_name' => trim($validated['full_name']),
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => 'user',
@@ -38,6 +42,7 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->flash('show_profile_completion', true);
 
         return redirect()->intended(route('my-courses'));
     }

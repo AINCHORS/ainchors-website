@@ -28,7 +28,7 @@ class AuthenticationAccountTest extends TestCase
     {
         $this->from(route('register'))
             ->post(route('register.store'), [
-                'name' => 'No Consent',
+                'full_name' => 'No Consent',
                 'email' => 'no-consent@example.test',
                 'password' => 'password123',
                 'password_confirmation' => 'password123',
@@ -42,17 +42,23 @@ class AuthenticationAccountTest extends TestCase
     public function test_registration_hashes_the_password_assigns_a_normal_user_and_authenticates_them(): void
     {
         $this->post(route('register.store'), [
-            'name' => 'New Learner',
+            'full_name' => 'New Learner',
             'email' => 'new-learner@example.test',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'terms' => '1',
-        ])->assertRedirect(route('my-courses'));
+        ])->assertRedirect(route('my-courses'))
+            ->assertSessionHas('show_profile_completion', true);
 
         $user = User::query()->where('email', 'new-learner@example.test')->firstOrFail();
 
         $this->assertAuthenticatedAs($user);
         $this->assertSame('New Learner', $user->full_name);
+        $this->assertSame('New', $user->first_name);
+        $this->assertSame('Learner', $user->last_name);
+        $this->assertNull($user->country);
+        $this->assertNull($user->phone);
+        $this->assertNull($user->postal_code);
         $this->assertSame('user', $user->role);
         $this->assertTrue(Hash::check('password123', $user->password));
         $this->assertNotSame('password123', $user->password);
@@ -75,6 +81,43 @@ class AuthenticationAccountTest extends TestCase
             ->assertRedirect(route('home'));
 
         $this->assertGuest();
+    }
+
+    public function test_incomplete_user_sees_profile_completion_prompt_after_login_and_can_complete_it(): void
+    {
+        $user = User::factory()->create([
+            'first_name' => 'New',
+            'last_name' => 'Learner',
+            'date_of_birth' => null,
+            'phone' => null,
+            'country' => null,
+            'address_line_1' => null,
+            'city' => null,
+            'state' => null,
+            'postal_code' => null,
+        ]);
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertSessionHas('show_profile_completion', true);
+
+        $this->get(route('my-courses'))
+            ->assertOk()
+            ->assertSee('Complete your profile')
+            ->assertSee('Maybe Later')
+            ->assertDontSee('Date of Birth')
+            ->assertDontSee('Home Address')
+            ->assertDontSee('Postal Code');
+
+        $this->get(route('my-courses'))
+            ->assertOk()
+            ->assertDontSee('Complete your profile');
+
+        $this->patch(route('profile.complete'), $this->personalDetails('New', 'Learner'))
+            ->assertSessionHas('profile_completion_success');
+
+        $this->assertTrue($user->fresh()->hasBasicProfile());
     }
 
     public function test_inactive_users_cannot_log_in(): void
@@ -181,7 +224,7 @@ class AuthenticationAccountTest extends TestCase
 
         $this->actingAs($user)
             ->patch(route('profile.update'), [
-                'full_name' => 'Updated Learner',
+                ...$this->personalDetails('Updated', 'Learner'),
                 'email' => 'after@example.test',
             ])
             ->assertSessionHas('profile_success');
@@ -190,6 +233,10 @@ class AuthenticationAccountTest extends TestCase
             'id' => $user->id,
             'full_name' => 'Updated Learner',
             'email' => 'after@example.test',
+            'first_name' => 'Updated',
+            'last_name' => 'Learner',
+            'country' => 'Malaysia',
+            'address_line_1' => 'Level 13A, Wisma Mont Kiara',
         ]);
     }
 
@@ -273,6 +320,23 @@ class AuthenticationAccountTest extends TestCase
             'billing_type' => 'one_time',
             'status' => 'active',
         ]);
+    }
+
+    /** @return array<string, string> */
+    private function personalDetails(string $firstName, string $lastName): array
+    {
+        return [
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'date_of_birth' => '1990-05-15',
+            'phone' => '+60 12 345 6789',
+            'country' => 'Malaysia',
+            'address_line_1' => 'Level 13A, Wisma Mont Kiara',
+            'address_line_2' => '',
+            'city' => 'Kuala Lumpur',
+            'state' => 'Wilayah Persekutuan Kuala Lumpur',
+            'postal_code' => '50480',
+        ];
     }
 
     private function completedOrderFor(User $user, Product $product, string $orderNumber): Order

@@ -9,7 +9,7 @@
         @if ($paymentDriver === 'demo')
             <div class="test-payment-notice"><strong>TEST PAYMENT</strong><span>No real payment will be charged.</span></div>
         @elseif (config('commerce.payment.environment') === 'sandbox')
-            <div class="test-payment-notice"><strong>SANDBOX PAYMENT</strong><span>Stripe and PayPal test environments are enabled. No live charge will be made.</span></div>
+            <div class="test-payment-notice"><strong>SANDBOX PAYMENT</strong><span>Hosted payment test environment is enabled. No live charge will be made.</span></div>
         @endif
 
         @if (session('payment_cancelled'))
@@ -17,7 +17,7 @@
         @endif
         @error('payment')<p class="form-error" role="alert">{{ $message }}</p>@enderror
 
-        <form method="POST" action="{{ route('checkout.store', $product) }}" class="checkout-grid" x-data="{ submitting: false }" @submit="submitting = true">
+        <form method="POST" action="{{ route('checkout.store', $product) }}" class="checkout-grid" x-data="{ submitting: false, provider: @js($availableProviders[0] ?? '') }" @submit="submitting = true">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $token }}">
 
@@ -43,19 +43,52 @@
                     </div>
                     <p class="security-note">Demo card details are validated for this request only and are never stored or logged.</p>
                 @else
-                    <h2>Choose a secure payment provider</h2>
+                    <h2>Payment Method</h2>
                     <p class="demo-values">You will enter your payment details on the provider's secure hosted checkout page. AINCHORS does not receive or store your card number or CVV.</p>
                     @if (empty($availableProviders))
                         <p class="form-error" role="alert">Online payment is not configured yet. Please contact AINCHORS before placing this order.</p>
                     @else
-                        <div class="form-grid" role="group" aria-label="Payment provider">
+                        <fieldset class="payment-methods">
+                            <legend class="sr-only">Select a payment provider</legend>
+
                             @if (in_array('stripe', $availableProviders, true))
-                                <button type="submit" name="payment_provider" value="stripe" class="primary-button form-button">Pay securely with Stripe</button>
+                                <label class="payment-provider-card" :class="{ 'payment-provider-card-selected': provider === 'stripe' }" @click="provider = 'stripe'">
+                                    <input type="radio" name="payment_provider" value="stripe" x-model="provider" @checked(($availableProviders[0] ?? '') === 'stripe')>
+                                    <span class="payment-provider-indicator" aria-hidden="true"></span>
+                                    <span class="payment-provider-logo payment-provider-logo-stripe" aria-hidden="true"><img src="{{ asset('assets/stripe-logo.png') }}" alt=""><strong>stripe</strong></span>
+                                    <span class="payment-provider-copy">
+                                        <span class="payment-provider-heading"><strong>Stripe</strong></span>
+                                        <span>Secure payment processed by Stripe</span>
+                                    </span>
+                                    <span class="payment-provider-badge payment-provider-badge-test">{{ config('commerce.payment.environment') === 'live' ? 'Live' : 'Test mode' }}</span>
+                                </label>
                             @endif
+
                             @if (in_array('paypal', $availableProviders, true))
-                                <button type="submit" name="payment_provider" value="paypal" class="secondary-button form-button">Pay securely with PayPal</button>
+                                <label class="payment-provider-card" :class="{ 'payment-provider-card-selected': provider === 'paypal' }" @click="provider = 'paypal'">
+                                    <input type="radio" name="payment_provider" value="paypal" x-model="provider" @checked(($availableProviders[0] ?? '') === 'paypal')>
+                                    <span class="payment-provider-indicator" aria-hidden="true"></span>
+                                    <span class="payment-provider-logo payment-provider-logo-paypal" aria-hidden="true"><img src="{{ asset('assets/paypal-logo.png') }}" alt=""></span>
+                                    <span class="payment-provider-copy">
+                                        <span class="payment-provider-heading"><strong>PayPal</strong></span>
+                                        <span>Pay securely with your PayPal account</span>
+                                    </span>
+                                    <span class="payment-provider-badge payment-provider-badge-test">{{ config('commerce.payment.environment') === 'live' ? 'Live' : 'Test mode' }}</span>
+                                </label>
+                            @else
+                                <div class="payment-provider-card payment-provider-card-disabled" aria-disabled="true">
+                                    <span class="payment-provider-indicator" aria-hidden="true"></span>
+                                    <span class="payment-provider-logo payment-provider-logo-paypal" aria-hidden="true"><img src="{{ asset('assets/paypal-logo.png') }}" alt=""></span>
+                                    <span class="payment-provider-copy">
+                                        <span class="payment-provider-heading"><strong>PayPal</strong></span>
+                                        <span>Add PayPal API credentials to enable</span>
+                                    </span>
+                                    <span class="payment-provider-badge">Coming soon</span>
+                                </div>
                             @endif
-                        </div>
+                        </fieldset>
+
+                        <button type="submit" class="primary-button form-button checkout-provider-cta" :disabled="submitting" x-text="submitting ? 'Redirecting…' : `Continue with ${provider === 'paypal' ? 'PayPal' : 'Stripe'}`">Continue with {{ str($availableProviders[0] ?? 'payment provider')->headline() }}</button>
                     @endif
                     @error('payment_provider')<p class="form-error">{{ $message }}</p>@enderror
                 @endif

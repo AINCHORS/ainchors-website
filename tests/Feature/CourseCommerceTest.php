@@ -21,6 +21,7 @@ class CourseCommerceTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        config(['commerce.payment.driver' => 'demo']);
         Storage::fake('local');
         $this->artisan('ainchors:populate-legacy-course-catalogue')->assertExitCode(0);
         $this->artisan('ainchors:populate-course-learning-content')->assertExitCode(0);
@@ -51,7 +52,8 @@ class CourseCommerceTest extends TestCase
         $this->get(route('checkout.show', $course));
 
         $response = $this->post(route('register.store'), [
-            'name' => 'New Learner', 'email' => 'new@example.com',
+            'full_name' => 'New Learner',
+            'email' => 'new@example.com',
             'password' => 'password123', 'password_confirmation' => 'password123',
             'terms' => '1',
         ]);
@@ -130,8 +132,14 @@ class CourseCommerceTest extends TestCase
         $course = $this->course();
         $token = $this->checkoutToken($user, $course);
         $this->actingAs($user)->get(route('checkout.show', $course))
-            ->assertSee('Pay securely with Stripe')
-            ->assertDontSee('Pay securely with PayPal')
+            ->assertSee('Payment Method')
+            ->assertSee('Secure payment processed by Stripe')
+            ->assertSee('Continue with Stripe')
+            ->assertSee('PayPal')
+            ->assertSee('Coming soon')
+            ->assertDontSee('name="payment_provider" value="paypal"', false)
+            ->assertSee('name="payment_provider" value="stripe"', false)
+            ->assertSee('Hosted payment test environment is enabled. No live charge will be made.')
             ->assertDontSee('Card Number');
 
         $this->actingAs($user)->post(route('checkout.store', $course), [
@@ -141,20 +149,23 @@ class CourseCommerceTest extends TestCase
 
         $order = Order::query()->firstOrFail();
         $this->assertSame('awaiting_payment', $order->status);
-        $this->assertDatabaseHas('payments', ['provider' => 'stripe', 'provider_transaction_id' => 'cs_test_ainchors', 'status' => 'pending']);
+        $this->assertDatabaseHas('payments', ['provider' => 'stripe', 'payment_environment' => 'test', 'provider_transaction_id' => 'cs_test_ainchors', 'status' => 'pending']);
         $this->assertDatabaseCount('enrollments', 0);
 
         $this->actingAs($user)->get(route('payments.stripe.return', $order).'?session_id=cs_test_ainchors')
             ->assertRedirect(route('checkout.success', $order));
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'completed']);
-        $this->assertDatabaseHas('payments', ['provider' => 'stripe', 'provider_transaction_id' => 'cs_test_ainchors', 'status' => 'paid']);
+        $this->assertDatabaseHas('payments', ['provider' => 'stripe', 'payment_environment' => 'test', 'provider_transaction_id' => 'cs_test_ainchors', 'status' => 'paid']);
         $this->assertDatabaseHas('enrollments', ['user_id' => $user->id, 'product_id' => $course->id]);
     }
 
-    public function test_single_course_hosted_execution_exposes_stripe_only_and_preserves_package_for_later(): void
+    public function test_hosted_checkout_rejects_unconfigured_paypal_and_supports_course_packages_with_stripe(): void
     {
         $this->enableStripeHostedCheckout(['stripe', 'paypal']);
-        Http::preventStrayRequests();
+        Http::fake(fn () => Http::response([
+            'id' => 'cs_test_package',
+            'url' => 'https://checkout.stripe.test/package',
+        ], 200));
 
         $user = User::factory()->create();
         $course = $this->course();
@@ -170,12 +181,209 @@ class CourseCommerceTest extends TestCase
         $this->actingAs($user)->from(route('checkout.show', $package))->post(route('checkout.store', $package), [
             'checkout_token' => $packageToken,
             'payment_provider' => 'stripe',
-        ])->assertRedirect(route('checkout.show', $package))->assertSessionHasErrors('payment');
+        ])->assertRedirect('https://checkout.stripe.test/package');
 
-        $this->assertDatabaseCount('orders', 0);
-        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseHas('payments', [
+            'provider' => 'stripe',
+            'provider_transaction_id' => 'cs_test_package',
+            'status' => 'pending',
+            'amount' => 150,
+            'currency' => 'USD',
+        ]);
         $this->assertDatabaseCount('enrollments', 0);
         $this->assertSame(10, $package->bundleProducts()->count());
+    }
+
+    public function test_paypal_hosted_package_payment_captures_before_unlocking_courses(): void
+    {
+        $this->enablePayPalHostedCheckout();
+        Http::fake(function (ClientRequest $request) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'paypal-access-token', 'expires_in' => 3600], 200);
+            }
+
+            if (str_ends_with($request->url(), '/v2/checkout/orders')) {
+                return Http::response([
+                    'id' => 'PAYPAL-ORDER-PACKAGE',
+                    'status' => 'CREATED',
+                    'links' => [[
+                        'rel' => 'approve',
+                        'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-PACKAGE',
+                    ]],
+                ], 201);
+            }
+
+            $order = Order::query()->firstOrFail();
+
+            return Http::response([
+                'id' => 'PAYPAL-ORDER-PACKAGE',
+                'status' => 'COMPLETED',
+                'purchase_units' => [[
+                    'reference_id' => $order->order_number,
+                    'custom_id' => $order->order_number,
+                    'payments' => ['captures' => [[
+                        'id' => 'PAYPAL-CAPTURE-PACKAGE',
+                        'status' => 'COMPLETED',
+                        'amount' => ['value' => '150.00', 'currency_code' => 'USD'],
+                        'supplementary_data' => ['related_ids' => ['order_id' => 'PAYPAL-ORDER-PACKAGE']],
+                    ]]],
+                ]],
+            ], 201);
+        });
+
+        $user = User::factory()->create();
+        $package = $this->package();
+        $token = $this->checkoutToken($user, $package);
+
+        $this->actingAs($user)->get(route('checkout.show', $package))
+            ->assertOk()
+            ->assertSee('name="payment_provider" value="paypal"', false)
+            ->assertSee('Continue with Paypal');
+
+        $this->actingAs($user)->post(route('checkout.store', $package), [
+            'checkout_token' => $token,
+            'payment_provider' => 'paypal',
+        ])->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-PACKAGE');
+
+        $order = Order::query()->firstOrFail();
+        $this->assertSame('awaiting_payment', $order->status);
+        $this->assertDatabaseCount('enrollments', 0);
+
+        $this->actingAs($user)
+            ->get(route('payments.paypal.return', $order).'?token=PAYPAL-ORDER-PACKAGE')
+            ->assertRedirect(route('checkout.success', $order));
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'provider' => 'paypal',
+            'payment_environment' => 'test',
+            'provider_transaction_id' => 'PAYPAL-CAPTURE-PACKAGE',
+            'status' => 'paid',
+        ]);
+        $this->assertDatabaseCount('enrollments', 10);
+    }
+
+    public function test_stripe_hosted_service_payment_completes_order_without_creating_course_access(): void
+    {
+        $this->enableStripeHostedCheckout();
+        Http::fake(function (ClientRequest $request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['id' => 'cs_test_service', 'url' => 'https://checkout.stripe.test/service'], 200);
+            }
+
+            $order = Order::query()->firstOrFail();
+
+            return Http::response([
+                'id' => 'cs_test_service',
+                'client_reference_id' => $order->order_number,
+                'metadata' => ['order_number' => $order->order_number],
+                'payment_status' => 'paid',
+                'amount_total' => 4900,
+                'currency' => 'usd',
+                'livemode' => false,
+            ], 200);
+        });
+
+        $service = Product::query()->create([
+            'type' => 'service',
+            'sku' => 'SERVICE-HOSTED-001',
+            'name' => 'Hosted Advisory Service',
+            'slug' => 'hosted-advisory-service',
+            'short_description' => 'A focused advisory service.',
+            'description' => 'A focused advisory service.',
+            'price' => 49,
+            'currency' => 'USD',
+            'billing_type' => 'one_time',
+            'status' => 'active',
+        ]);
+        $user = User::factory()->create();
+        $token = $this->checkoutToken($user, $service);
+
+        $this->actingAs($user)->post(route('checkout.store', $service), [
+            'checkout_token' => $token,
+            'payment_provider' => 'stripe',
+        ])->assertRedirect('https://checkout.stripe.test/service');
+
+        $order = Order::query()->firstOrFail();
+        $this->actingAs($user)
+            ->get(route('payments.stripe.return', $order).'?session_id=cs_test_service')
+            ->assertRedirect(route('checkout.success', $order));
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'completed']);
+        $this->assertDatabaseCount('enrollments', 0);
+        $this->actingAs($user)->get(route('checkout.success', $order))
+            ->assertOk()
+            ->assertSee('Your service order is confirmed.')
+            ->assertSee('Purchase History')
+            ->assertDontSee('Access Course');
+    }
+
+    public function test_verified_paypal_webhook_completes_the_matching_pending_package_once(): void
+    {
+        $this->enablePayPalHostedCheckout();
+        Http::fake(function (ClientRequest $request) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'paypal-access-token', 'expires_in' => 3600], 200);
+            }
+
+            if (str_ends_with($request->url(), '/v1/notifications/verify-webhook-signature')) {
+                return Http::response(['verification_status' => 'SUCCESS'], 200);
+            }
+
+            return Http::response([
+                'id' => 'PAYPAL-ORDER-WEBHOOK',
+                'status' => 'CREATED',
+                'links' => [[
+                    'rel' => 'approve',
+                    'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-WEBHOOK',
+                ]],
+            ], 201);
+        });
+
+        $user = User::factory()->create();
+        $package = $this->package();
+        $token = $this->checkoutToken($user, $package);
+        $this->actingAs($user)->post(route('checkout.store', $package), [
+            'checkout_token' => $token,
+            'payment_provider' => 'paypal',
+        ])->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-WEBHOOK');
+
+        $order = Order::query()->firstOrFail();
+        $event = [
+            'id' => 'WH-PAYPAL-CAPTURE',
+            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
+            'resource' => [
+                'id' => 'PAYPAL-CAPTURE-WEBHOOK',
+                'status' => 'COMPLETED',
+                'amount' => ['value' => '150.00', 'currency_code' => 'USD'],
+                'supplementary_data' => ['related_ids' => ['order_id' => 'PAYPAL-ORDER-WEBHOOK']],
+            ],
+        ];
+        $headers = [
+            'PayPal-Auth-Algo' => 'SHA256withRSA',
+            'PayPal-Cert-Url' => 'https://api-m.sandbox.paypal.com/cert.pem',
+            'PayPal-Transmission-Id' => 'paypal-transmission-id',
+            'PayPal-Transmission-Sig' => 'paypal-signature',
+            'PayPal-Transmission-Time' => now()->toIso8601String(),
+        ];
+
+        $this->withHeaders($headers)->postJson(route('payments.paypal.webhook'), $event)
+            ->assertOk()
+            ->assertJson(['received' => true]);
+        $this->withHeaders($headers)->postJson(route('payments.paypal.webhook'), $event)
+            ->assertOk();
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'provider' => 'paypal',
+            'payment_environment' => 'test',
+            'provider_transaction_id' => 'PAYPAL-CAPTURE-WEBHOOK',
+            'status' => 'paid',
+        ]);
+        $this->assertDatabaseCount('enrollments', 10);
     }
 
     public function test_draft_inactive_incomplete_and_monthly_courses_cannot_checkout(): void
@@ -289,6 +497,9 @@ class CourseCommerceTest extends TestCase
         $this->assertSame('USD', data_get($item->metadata, 'currency'));
         $this->assertDatabaseHas('payments', ['provider_transaction_id' => 'cs_test_snapshot', 'status' => 'pending']);
         $this->assertDatabaseCount('enrollments', 0);
+        Http::assertSent(fn (ClientRequest $request): bool =>
+            data_get($request->data(), 'invoice_creation.enabled') === 'true'
+        );
     }
 
     public function test_failed_stripe_session_marks_attempt_failed_without_enrollment_and_can_retry(): void
@@ -327,6 +538,51 @@ class CourseCommerceTest extends TestCase
         $this->assertDatabaseCount('payments', 2);
         $this->assertDatabaseHas('payments', ['provider_transaction_id' => 'cs_test_retry', 'status' => 'pending']);
         $this->assertDatabaseCount('enrollments', 0);
+    }
+
+    public function test_cancelled_stripe_checkout_shows_unsuccessful_page_without_enrollment(): void
+    {
+        $this->enableStripeHostedCheckout();
+        Http::fake(fn () => Http::response([
+            'id' => 'cs_test_cancelled',
+            'url' => 'https://checkout.stripe.test/cancelled',
+        ], 200));
+
+        $user = User::factory()->create();
+        $course = $this->course();
+        $token = $this->checkoutToken($user, $course);
+
+        $this->actingAs($user)->post(route('checkout.store', $course), [
+            'checkout_token' => $token,
+            'payment_provider' => 'stripe',
+        ])->assertRedirect('https://checkout.stripe.test/cancelled');
+
+        $order = Order::query()->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('payments.cancel', ['provider' => 'stripe', 'order' => $order]))
+            ->assertRedirect(route('checkout.failed', $order))
+            ->assertSessionHas('payment_failure_context', [
+                'state' => 'cancelled',
+                'provider' => 'stripe',
+            ]);
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'provider' => 'stripe',
+            'status' => 'failed',
+        ]);
+        $this->assertDatabaseCount('enrollments', 0);
+
+        $this->actingAs($user)
+            ->get(route('checkout.failed', $order))
+            ->assertOk()
+            ->assertSee('Payment Unsuccessful')
+            ->assertSee('You have not been charged.')
+            ->assertSee('Try Again')
+            ->assertSee('My Courses')
+            ->assertSee('Purchase History');
     }
 
     public function test_different_checkout_tokens_reuse_one_pending_course_purchase(): void
@@ -536,6 +792,18 @@ class CourseCommerceTest extends TestCase
             'commerce.payment.environment' => 'sandbox',
             'commerce.payment.enabled_providers' => $providers,
             'commerce.payment.stripe.secret' => implode('_', ['sk', 'test', 'fixture']),
+        ]);
+    }
+
+    private function enablePayPalHostedCheckout(): void
+    {
+        config([
+            'commerce.payment.driver' => 'hosted',
+            'commerce.payment.environment' => 'sandbox',
+            'commerce.payment.enabled_providers' => ['paypal'],
+            'commerce.payment.paypal.client_id' => 'paypal-client-id-fixture',
+            'commerce.payment.paypal.client_secret' => 'paypal-client-secret-fixture',
+            'commerce.payment.paypal.webhook_id' => 'paypal-webhook-id-fixture',
         ]);
     }
 

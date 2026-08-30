@@ -95,6 +95,7 @@ return new class extends Migration
                 $table->id();
                 $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate();
                 $table->string('provider', 100);
+                $table->string('payment_environment', 20)->default('unknown');
                 $table->string('provider_transaction_id')->nullable();
                 $table->decimal('amount', 12, 2);
                 $table->char('currency', 3);
@@ -104,6 +105,7 @@ return new class extends Migration
                 $table->json('provider_data')->nullable();
                 $table->timestamps();
                 $table->unique(['provider', 'provider_transaction_id'], 'uq_payment_provider_transaction');
+                $table->index(['status', 'payment_environment', 'currency'], 'idx_payments_live_analytics');
             });
         }
 

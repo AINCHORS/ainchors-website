@@ -43,8 +43,8 @@ class CheckoutController extends Controller
         $request->session()->put($key, $token);
 
         $paymentDriver = (string) config('commerce.payment.driver', 'demo');
-        $availableProviders = $paymentDriver === 'hosted' && $product->isCourse()
-            ? array_values(array_intersect($this->hostedPayments->availableProviders(), ['stripe']))
+        $availableProviders = $paymentDriver === 'hosted'
+            ? $this->hostedPayments->availableProviders()
             : [];
 
         return view('checkout.show', compact('product', 'token', 'paymentDriver', 'availableProviders'));
@@ -99,16 +99,12 @@ class CheckoutController extends Controller
 
     private function startHostedCheckout(Request $request, Product $product): RedirectResponse
     {
-        if ($product->isPackage()) {
-            return back()->withErrors(['payment' => 'Course package hosted payment is not enabled yet.']);
-        }
-
-        $availableProviders = array_values(array_intersect($this->hostedPayments->availableProviders(), ['stripe']));
+        $availableProviders = $this->hostedPayments->availableProviders();
         $validator = Validator::make($request->only(['checkout_token', 'payment_provider']), [
             'checkout_token' => ['required', 'string', 'max:64'],
             'payment_provider' => ['required', Rule::in($availableProviders)],
         ], [
-            'payment_provider.required' => 'Choose Stripe to continue.',
+            'payment_provider.required' => 'Choose a payment provider to continue.',
             'payment_provider.in' => 'The selected payment provider is not available.',
         ]);
 
@@ -152,7 +148,7 @@ class CheckoutController extends Controller
 
         abort_unless(
             $product->status === 'active'
-            && $product->isPackage()
+            && in_array($product->type, ['course_package', 'consulting', 'service'], true)
             && $product->billing_type === 'one_time'
             && (float) $product->price > 0
             && array_key_exists($product->currency, config('commerce.supported_currencies', [])),

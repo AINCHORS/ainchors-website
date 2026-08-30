@@ -46,6 +46,10 @@ class AuthenticatedSessionController extends Controller
             return redirect($this->adminDestination($request));
         }
 
+        if (! $user->hasBasicProfile()) {
+            $request->session()->flash('show_profile_completion', true);
+        }
+
         return redirect()->intended(route('my-courses'));
     }
 

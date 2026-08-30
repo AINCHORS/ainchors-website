@@ -19,6 +19,7 @@ class PaymentService
     {
         return $order->payments()->create([
             'provider' => 'demo',
+            'payment_environment' => 'test',
             'provider_transaction_id' => 'DEMO-'.now()->format('Ymd').'-'.Str::upper(Str::random(10)),
             'amount' => $order->total_amount,
             'currency' => $order->currency,
@@ -30,8 +31,17 @@ class PaymentService
 
     public function beginStripePayment(Order $order): Payment
     {
+        return $this->beginProviderPayment($order, 'stripe');
+    }
+
+    public function beginProviderPayment(Order $order, string $provider): Payment
+    {
+        if (! in_array($provider, ['stripe', 'paypal'], true)) {
+            throw new \RuntimeException('The selected hosted payment provider is not supported.');
+        }
+
         $existing = $order->payments()
-            ->where('provider', 'stripe')
+            ->where('provider', $provider)
             ->whereIn('status', ['pending', 'processing'])
             ->latest('id')
             ->lockForUpdate()
@@ -42,7 +52,10 @@ class PaymentService
         }
 
         return $order->payments()->create([
-            'provider' => 'stripe',
+            'provider' => $provider,
+            'payment_environment' => Payment::inferEnvironment($provider, null, [
+                'environment' => config('commerce.payment.environment'),
+            ]),
             'provider_transaction_id' => null,
             'amount' => $order->total_amount,
             'currency' => $order->currency,
@@ -51,7 +64,7 @@ class PaymentService
             'failure_reason' => null,
             'provider_data' => [
                 'environment' => config('commerce.payment.environment'),
-                'stage' => 'checkout_session_initialization',
+                'stage' => 'hosted_checkout_initialization',
             ],
         ]);
     }
@@ -59,12 +72,14 @@ class PaymentService
     /** @param array<string, mixed> $providerData */
     public function attachProviderReference(Payment $payment, string $transactionId, array $providerData = []): Payment
     {
-        if ($payment->provider !== 'stripe' || ! in_array($payment->status, ['pending', 'processing'], true)) {
-            throw new \RuntimeException('The Stripe payment attempt is no longer pending.');
+        if (! in_array($payment->provider, ['stripe', 'paypal'], true)
+            || ! in_array($payment->status, ['pending', 'processing'], true)) {
+            throw new \RuntimeException('The hosted payment attempt is no longer pending.');
         }
 
         $payment->update([
             'provider_transaction_id' => $transactionId,
+            'payment_environment' => Payment::inferEnvironment($payment->provider, $transactionId, $providerData),
             'amount' => $payment->order->total_amount,
             'currency' => $payment->order->currency,
             'provider_data' => array_merge($payment->provider_data ?? [], $providerData),
@@ -80,7 +95,7 @@ class PaymentService
                 'status' => 'failed',
                 'paid_at' => null,
                 'failure_reason' => $safeReason,
-                'provider_data' => array_merge($payment->provider_data ?? [], ['stage' => 'checkout_session_failed']),
+                'provider_data' => array_merge($payment->provider_data ?? [], ['stage' => 'hosted_checkout_failed']),
             ]);
         }
 
@@ -95,6 +110,7 @@ class PaymentService
             [
                 'amount' => $order->total_amount,
                 'currency' => $order->currency,
+                'payment_environment' => Payment::inferEnvironment($provider, $transactionId, $providerData),
                 'status' => 'pending',
                 'paid_at' => null,
                 'failure_reason' => null,

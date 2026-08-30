@@ -86,13 +86,20 @@ class CheckoutService
             }
 
             $product = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
-            abort_unless($product->status === 'active' && in_array($product->type, ['course', 'course_package'], true), 404);
+            abort_unless(
+                $product->status === 'active'
+                && in_array($product->type, ['course', 'course_package', 'consulting', 'service'], true)
+                && $product->billing_type === 'one_time'
+                && (float) $product->price > 0
+                && array_key_exists(strtoupper((string) $product->currency), config('commerce.supported_currencies', [])),
+                404,
+            );
             if ($product->isCourse()) {
                 $this->eligibility->assertCourseCanBePurchased($product, $user);
             }
 
             $targets = $this->enrollmentTargets($product);
-            if ($targets->isEmpty()) {
+            if ($product->isPackage() && $targets->isEmpty()) {
                 throw new RuntimeException('This package has no related courses.');
             }
 
@@ -113,13 +120,39 @@ class CheckoutService
     /** @return array{Order, Payment} */
     public function prepareStripeOrder(User $user, Product $course, string $idempotencyKey): array
     {
-        return DB::transaction(function () use ($user, $course, $idempotencyKey): array {
-            $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            $course = Product::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
-            $this->eligibility->assertCourseCanBePurchased($course, $user);
+        return $this->prepareHostedOrder($user, $course, $idempotencyKey, 'stripe');
+    }
 
-            if ($this->access->canAccess($user, $course)) {
-                throw new AlreadyOwnedException($course);
+    /** @return array{Order, Payment} */
+    public function prepareHostedOrder(User $user, Product $product, string $idempotencyKey, string $provider): array
+    {
+        return DB::transaction(function () use ($user, $product, $idempotencyKey, $provider): array {
+            $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $product = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
+            abort_unless(
+                $product->status === 'active'
+                && in_array($product->type, ['course', 'course_package', 'consulting', 'service'], true)
+                && $product->billing_type === 'one_time'
+                && (float) $product->price > 0
+                && array_key_exists(strtoupper((string) $product->currency), config('commerce.supported_currencies', [])),
+                404,
+            );
+
+            if ($product->isCourse()) {
+                $this->eligibility->assertCourseCanBePurchased($product, $user);
+            }
+
+            $targets = $this->enrollmentTargets($product);
+            if ($product->isPackage() && $targets->isEmpty()) {
+                throw new RuntimeException('This package has no related courses.');
+            }
+
+            if ($product->isCourse() && $this->access->canAccess($user, $product)) {
+                throw new AlreadyOwnedException($product);
+            }
+
+            if ($product->isPackage() && $targets->every(fn (Product $course) => $this->access->canAccess($user, $course))) {
+                throw new AlreadyOwnedException($product);
             }
 
             $existing = Order::query()
@@ -129,18 +162,18 @@ class CheckoutService
                 ->first();
 
             if ($existing) {
-                $sameCourse = $existing->items->contains(fn (OrderItem $item): bool => $item->product_id === $course->id);
-                if (! $sameCourse || $existing->status !== 'awaiting_payment') {
+                $sameProduct = $existing->items->contains(fn (OrderItem $item): bool => $item->product_id === $product->id);
+                if (! $sameProduct || $existing->status !== 'awaiting_payment') {
                     throw new RuntimeException('This checkout attempt cannot be reused. Please start a new checkout.');
                 }
 
-                return [$existing, $this->payments->beginStripePayment($existing)];
+                return [$existing, $this->payments->beginProviderPayment($existing, $provider)];
             }
 
-            $awaiting = $this->orders->awaitingStripePurchaseFor($user, $course);
+            $awaiting = $this->orders->awaitingHostedPurchaseFor($user, $product, $provider);
             if ($awaiting) {
                 $payment = $awaiting->payments
-                    ->first(fn (Payment $candidate): bool => $candidate->provider === 'stripe'
+                    ->first(fn (Payment $candidate): bool => $candidate->provider === $provider
                         && in_array($candidate->status, ['pending', 'processing'], true));
 
                 if ($payment) {
@@ -148,9 +181,9 @@ class CheckoutService
                 }
             }
 
-            [$order] = $this->orders->createForProduct($user, $course, $idempotencyKey);
+            [$order] = $this->orders->createForProduct($user, $product, $idempotencyKey);
 
-            return [$order, $this->payments->beginStripePayment($order)];
+            return [$order, $this->payments->beginProviderPayment($order, $provider)];
         }, 3);
     }
 
@@ -248,18 +281,21 @@ class CheckoutService
         }
 
         if ($payment) {
+            $verifiedProviderData = array_merge($payment->provider_data ?? [], $providerData);
             $payment->update([
                 'provider_transaction_id' => $transactionId,
+                'payment_environment' => Payment::inferEnvironment($provider, $transactionId, $verifiedProviderData),
                 'amount' => $order->total_amount,
                 'currency' => $order->currency,
                 'status' => 'paid',
                 'paid_at' => now(),
                 'failure_reason' => null,
-                'provider_data' => $providerData,
+                'provider_data' => $verifiedProviderData,
             ]);
         } elseif ($provider === 'demo') {
             $payment = $order->payments()->create([
                 'provider' => $provider,
+                'payment_environment' => Payment::inferEnvironment($provider, $transactionId, $providerData),
                 'provider_transaction_id' => $transactionId,
                 'amount' => $order->total_amount,
                 'currency' => $order->currency,
@@ -292,7 +328,7 @@ class CheckoutService
             throw new RuntimeException('The order has no purchasable item.');
         }
 
-        if ($provider !== 'stripe') {
+        if ($provider === 'demo') {
             return $item;
         }
 
@@ -302,18 +338,27 @@ class CheckoutService
             ->unique()
             ->values();
         $snapshotCurrency = strtoupper((string) data_get($item->metadata, 'currency', ''));
+        $snapshotType = (string) data_get($item->metadata, 'product_type', '');
+        $allowedTypes = ['course', 'course_package', 'consulting', 'service'];
+        $validCourseTargets = match ($snapshotType) {
+            'course' => $courseIds->count() === 1
+                && $courseIds->first() === (int) $item->product_id
+                && $item->product?->isCourse(),
+            'course_package' => $courseIds->isNotEmpty() && $item->product?->isPackage(),
+            'consulting', 'service' => $courseIds->isEmpty()
+                && $item->product?->type === $snapshotType,
+            default => false,
+        };
         $valid = $items->count() === 1
-            && data_get($item->metadata, 'product_type') === 'course'
+            && in_array($snapshotType, $allowedTypes, true)
             && $snapshotCurrency === strtoupper((string) $order->currency)
-            && $courseIds->count() === 1
-            && $courseIds->first() === (int) $item->product_id
-            && $item->product?->isCourse()
+            && $validCourseTargets
             && (int) $item->quantity === 1
             && number_format((float) $item->unit_price, 2, '.', '') === number_format((float) $order->total_amount, 2, '.', '')
             && number_format((float) $item->line_total, 2, '.', '') === number_format((float) $order->total_amount, 2, '.', '');
 
         if (! $valid) {
-            throw new RuntimeException('The Stripe payment does not match a valid single-course order snapshot.');
+            throw new RuntimeException('The hosted payment does not match a valid order snapshot.');
         }
 
         return $item;

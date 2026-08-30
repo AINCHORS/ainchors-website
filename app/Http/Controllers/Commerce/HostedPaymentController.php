@@ -8,6 +8,7 @@ use App\Services\Commerce\CheckoutService;
 use App\Services\Commerce\HostedPaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use RuntimeException;
 
 class HostedPaymentController extends Controller
@@ -27,10 +28,12 @@ class HostedPaymentController extends Controller
             $order = $this->hostedPayments->completeStripeReturn($order, $sessionId);
         } catch (RuntimeException $exception) {
             report($exception);
-            $product = $order->items()->firstOrFail()->product;
 
-            return redirect()->route('checkout.show', $product)
-                ->withErrors(['payment' => $exception->getMessage()]);
+            return redirect()->route('checkout.failed', $order)
+                ->with('payment_failure_context', [
+                    'state' => 'failed',
+                    'provider' => 'stripe',
+                ]);
         }
 
         return redirect()->route('checkout.success', $order);
@@ -46,16 +49,18 @@ class HostedPaymentController extends Controller
             $order = $this->hostedPayments->completePayPalReturn($order, $payPalOrderId);
         } catch (RuntimeException $exception) {
             report($exception);
-            $product = $order->items()->firstOrFail()->product;
 
-            return redirect()->route('checkout.show', $product)
-                ->withErrors(['payment' => $exception->getMessage()]);
+            return redirect()->route('checkout.failed', $order)
+                ->with('payment_failure_context', [
+                    'state' => 'failed',
+                    'provider' => 'paypal',
+                ]);
         }
 
         return redirect()->route('checkout.success', $order);
     }
 
-    public function cancel(Request $request, Order $order, string $provider): RedirectResponse
+    public function cancel(Request $request, string $provider, Order $order): RedirectResponse
     {
         $this->assertOwned($request, $order);
         abort_unless(in_array($provider, ['stripe', 'paypal'], true), 404);
@@ -64,7 +69,34 @@ class HostedPaymentController extends Controller
         $this->checkout->cancelPendingPayment($order, $provider);
         $request->session()->forget('checkout_tokens.'.$product->id);
 
-        return redirect()->route('checkout.show', $product)->with('payment_cancelled', 'Payment was cancelled. You have not been charged.');
+        return redirect()->route('checkout.failed', $order)
+            ->with('payment_failure_context', [
+                'state' => 'cancelled',
+                'provider' => $provider,
+            ]);
+    }
+
+    public function failed(Request $request, Order $order): View|RedirectResponse
+    {
+        $this->assertOwned($request, $order);
+        $order->loadMissing(['items.product', 'payments']);
+
+        if ($order->status === 'completed' || $order->payments->contains('status', 'paid')) {
+            return redirect()->route('checkout.success', $order);
+        }
+
+        $context = (array) $request->session()->get('payment_failure_context', []);
+
+        return view('checkout.failed', [
+            'order' => $order,
+            'item' => $order->items->firstOrFail(),
+            'state' => in_array(($context['state'] ?? null), ['cancelled', 'failed'], true)
+                ? $context['state']
+                : 'failed',
+            'provider' => in_array(($context['provider'] ?? null), ['stripe', 'paypal'], true)
+                ? $context['provider']
+                : null,
+        ]);
     }
 
     private function assertOwned(Request $request, Order $order): void

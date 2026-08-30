@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\ExternalInvoice;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
@@ -43,6 +44,7 @@ class StripePaymentCompletionTest extends TestCase
             'commerce.payment.enabled_providers' => ['stripe'],
             'commerce.payment.stripe.secret' => implode('_', ['sk', 'test', 'phase', 'two', 'fixture']),
             'commerce.payment.stripe.webhook_secret' => $this->webhookSecret,
+            'commerce.invoices.trusted_hosts' => ['invoice.stripe.com'],
         ]);
     }
 
@@ -84,6 +86,19 @@ class StripePaymentCompletionTest extends TestCase
             'status' => 'active',
         ]);
         $this->assertDatabaseCount('enrollments', 1);
+        $this->assertDatabaseHas('external_invoices', [
+            'order_id' => $order->id,
+            'provider' => 'stripe',
+            'external_reference' => 'in_'.$sessionId,
+            'status' => 'issued',
+        ]);
+        $invoice = ExternalInvoice::query()->firstOrFail();
+        $this->actingAs($user)->get(route('checkout.success', $order))
+            ->assertOk()
+            ->assertSee('View Invoice')
+            ->assertSee(route('purchase-history.invoice', $invoice), false);
+        $this->actingAs($user)->get(route('purchase-history.invoice', $invoice))
+            ->assertRedirect('https://invoice.stripe.com/i/'.$sessionId);
         $this->actingAs($user)->get(route('my-courses'))->assertOk()->assertSee($course->name);
         $this->actingAs($user)->get(route('learn.show', $course))->assertOk();
     }
@@ -207,6 +222,11 @@ class StripePaymentCompletionTest extends TestCase
             'payment_status' => 'paid',
             'amount_total' => 1900,
             'currency' => 'usd',
+            'invoice' => [
+                'id' => 'in_'.$sessionId,
+                'number' => 'TEST-'.$order->id,
+                'hosted_invoice_url' => 'https://invoice.stripe.com/i/'.$sessionId,
+            ],
         ];
     }
 

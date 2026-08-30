@@ -12,7 +12,8 @@ class PayPalGateway
     public function configured(): bool
     {
         return filled(config('commerce.payment.paypal.client_id'))
-            && filled(config('commerce.payment.paypal.client_secret'));
+            && filled(config('commerce.payment.paypal.client_secret'))
+            && filled(config('commerce.payment.paypal.webhook_id'));
     }
 
     /** @return array<string, mixed> */
@@ -20,7 +21,10 @@ class PayPalGateway
     {
         $item = $order->items->firstOrFail();
         $response = $this->client()
-            ->withHeaders(['PayPal-Request-Id' => $order->idempotency_key.'-paypal'])
+            ->withHeaders([
+                'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-create'),
+                'Prefer' => 'return=representation',
+            ])
             ->post($this->apiUrl('/v2/checkout/orders'), [
                 'intent' => 'CAPTURE',
                 'purchase_units' => [[
@@ -58,7 +62,10 @@ class PayPalGateway
     public function captureOrder(string $payPalOrderId, string $requestId): array
     {
         $response = $this->client()
-            ->withHeaders(['PayPal-Request-Id' => $requestId])
+            ->withHeaders([
+                'PayPal-Request-Id' => $this->requestId($requestId),
+                'Prefer' => 'return=representation',
+            ])
             ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($payPalOrderId).'/capture'), []);
 
         if (! $response->successful()) {
@@ -125,5 +132,10 @@ class PayPalGateway
     private function formattedAmount(string|float $amount, string $currency): string
     {
         return number_format((float) $amount, strtoupper($currency) === 'JPY' ? 0 : 2, '.', '');
+    }
+
+    private function requestId(string $value): string
+    {
+        return substr(hash('sha256', $value), 0, 32);
     }
 }

@@ -17,7 +17,7 @@ class DashboardController extends Controller
 {
     public function index(): View
     {
-        $paidPayments = Payment::query()->where('status', 'paid')->count();
+        $paidPayments = Payment::query()->liveRevenue()->count();
 
         $metrics = [
             'total_users' => User::query()->count(),
@@ -32,10 +32,12 @@ class DashboardController extends Controller
             // Keep the original metric key during Phase 1 so existing admin
             // regression tests and any internal references remain compatible.
             'completed_payments' => $paidPayments,
-            'pending_payments' => Payment::query()->whereIn('status', ['pending', 'processing'])->count(),
-            'failed_payments' => Payment::query()->where('status', 'failed')->count(),
-            'test_payments' => Payment::query()->where('provider', 'demo')->count(),
-            'non_demo_payments' => Payment::query()->where('provider', '!=', 'demo')->count(),
+            'pending_payments' => Payment::query()->where('payment_environment', 'live')->whereIn('status', ['pending', 'processing'])->count(),
+            'failed_payments' => Payment::query()->where('payment_environment', 'live')->where('status', 'failed')->count(),
+            'test_payments' => Payment::query()->where(function ($query): void {
+                $query->where('provider', 'demo')->orWhere('payment_environment', 'test');
+            })->count(),
+            'live_provider_payments' => Payment::query()->where('payment_environment', 'live')->where('provider', '!=', 'demo')->count(),
             'enrollments' => Enrollment::query()->count(),
             'job_applications_new' => JobApplication::query()->where('status', 'new')->count(),
             'job_applications_reviewing' => JobApplication::query()->where('status', 'reviewing')->count(),
@@ -45,11 +47,8 @@ class DashboardController extends Controller
             'consultations_booked' => ConsultationRequest::query()->where('status', 'booked')->count(),
         ];
 
-        // Do not combine currencies. Demo rows are explicitly test data. For
-        // non-demo providers Phase 1 does not claim a live/test environment,
-        // because first-class payment environments are added in Phase 2.
         $revenueByCurrency = Payment::query()
-            ->where('status', 'paid')
+            ->liveRevenue()
             ->select('currency', 'provider')
             ->selectRaw('SUM(amount) as total_amount')
             ->selectRaw('COUNT(*) as payment_count')
@@ -71,7 +70,7 @@ class DashboardController extends Controller
 
         $recentPayments = Payment::query()
             ->select([
-                'id', 'order_id', 'provider', 'provider_transaction_id', 'amount',
+                'id', 'order_id', 'provider', 'payment_environment', 'provider_transaction_id', 'amount',
                 'currency', 'status', 'paid_at', 'created_at',
             ])
             ->with([

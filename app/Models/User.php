@@ -15,7 +15,9 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'role', 'full_name', 'email', 'password', 'phone', 'country',
+        'role', 'full_name', 'first_name', 'last_name', 'date_of_birth',
+        'email', 'password', 'phone', 'country', 'address_line_1', 'address_line_2',
+        'city', 'state', 'postal_code',
         'profile_picture', 'status', 'email_verified_at', 'last_login_at',
     ];
 
@@ -27,6 +29,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'date_of_birth' => 'date',
         ];
     }
 
@@ -69,5 +72,30 @@ class User extends Authenticatable
             && $this->status === 'active'
             && $configuredEmail !== ''
             && strtolower(trim((string) $this->email)) === $configuredEmail;
+    }
+
+    public function hasCompleteProfile(): bool
+    {
+        return collect([
+            $this->first_name,
+            $this->last_name,
+            $this->date_of_birth,
+            $this->phone,
+            $this->country,
+            $this->address_line_1,
+            $this->city,
+            $this->state,
+            $this->postal_code,
+        ])->every(fn ($value): bool => filled($value));
+    }
+
+    public function hasBasicProfile(): bool
+    {
+        return collect([
+            $this->first_name,
+            $this->last_name,
+            $this->phone,
+            $this->country,
+        ])->every(fn ($value): bool => filled($value));
     }
 }

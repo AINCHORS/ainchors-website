@@ -43,12 +43,17 @@ class OrderService
 
     public function awaitingStripePurchaseFor(User $user, Product $course): ?Order
     {
+        return $this->awaitingHostedPurchaseFor($user, $course, 'stripe');
+    }
+
+    public function awaitingHostedPurchaseFor(User $user, Product $product, string $provider): ?Order
+    {
         return Order::query()
             ->where('user_id', $user->id)
             ->where('status', 'awaiting_payment')
-            ->whereHas('items', fn ($query) => $query->where('product_id', $course->id))
+            ->whereHas('items', fn ($query) => $query->where('product_id', $product->id))
             ->whereHas('payments', fn ($query) => $query
-                ->where('provider', 'stripe')
+                ->where('provider', $provider)
                 ->whereIn('status', ['pending', 'processing']))
             ->with(['items.product', 'payments' => fn ($query) => $query->latest('id')])
             ->latest('id')

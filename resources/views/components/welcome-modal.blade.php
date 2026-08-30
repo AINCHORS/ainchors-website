@@ -2,7 +2,7 @@
     $frequency = app(\App\Services\Content\SiteSettings::class)->welcomeModalFrequency();
     $routeName = request()->route()?->getName() ?? '';
     $excluded = auth()->check()
-        || in_array($routeName, ['login', 'login.store', 'register', 'register.store', 'checkout.show', 'checkout.store', 'checkout.success'], true)
+        || in_array($routeName, ['login', 'login.store', 'register', 'register.store', 'checkout.show', 'checkout.store', 'checkout.success', 'checkout.failed'], true)
         || str_starts_with(request()->path(), 'admin')
         || str_starts_with(request()->path(), 'password');
     $seen = session()->has('ainchors.welcome_modal_seen');

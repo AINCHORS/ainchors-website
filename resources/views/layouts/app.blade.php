@@ -15,6 +15,7 @@
         @yield('content')
     </main>
     <x-welcome-modal />
+    <x-profile-completion-modal />
     <x-site-footer />
     <x-ai-assistant />
 </body>

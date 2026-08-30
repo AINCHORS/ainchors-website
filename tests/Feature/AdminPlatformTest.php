@@ -50,12 +50,22 @@ class AdminPlatformTest extends TestCase
         $order = $this->orderFor($learner, $product, 'AIN-ADMIN-DASHBOARD');
         $order->payments()->create([
             'provider' => 'demo',
+            'payment_environment' => 'test',
             'provider_transaction_id' => 'DEMO-DASHBOARD-001',
             'amount' => 19,
             'currency' => 'USD',
             'status' => 'paid',
             'paid_at' => now(),
             'provider_data' => ['mode' => 'test'],
+        ]);
+        $order->payments()->create([
+            'provider' => 'stripe',
+            'payment_environment' => 'live',
+            'provider_transaction_id' => 'STRIPE-DASHBOARD-001',
+            'amount' => 38,
+            'currency' => 'USD',
+            'status' => 'paid',
+            'paid_at' => now(),
         ]);
 
         $response = $this->actingAs($admin)->get(route('admin.dashboard'));
@@ -65,7 +75,12 @@ class AdminPlatformTest extends TestCase
             ->assertSee('Demo / test')
             ->assertViewHas('metrics', fn (array $metrics): bool => $metrics['total_users'] === 2
                 && $metrics['total_orders'] === 1
-                && $metrics['completed_payments'] === 1);
+                && $metrics['completed_payments'] === 1
+                && $metrics['paid_payments'] === 1
+                && $metrics['test_payments'] === 1)
+            ->assertViewHas('revenueByCurrency', fn ($rows): bool => $rows->count() === 1
+                && $rows->first()->provider === 'stripe'
+                && (float) $rows->first()->total_amount === 38.0);
     }
 
     public function test_secure_admin_provisioning_hashes_a_runtime_password_and_never_echoes_it(): void

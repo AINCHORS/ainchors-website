@@ -248,29 +248,59 @@ img { display: block; max-width: 100%; }
 .product-detail-copy .primary-button:hover,.product-detail-copy .primary-button:focus-visible { border-color: #37ad82; background: #e8fff7; color: #0f4c43; box-shadow: 0 12px 26px rgba(15,76,67,.14); }
 .included-course-list { columns: 2; gap: 32px; padding-left: 20px; color: #43556a; line-height: 1.7; }
 
-.checkout-section { padding: 80px 0 100px; background: #f5f8fb; }
-.checkout-shell { max-width: 1040px; }
+.checkout-section { padding: 58px 0 78px; background: radial-gradient(circle at 12% 8%,rgba(71,255,132,.24) 0%,rgba(71,255,132,0) 34%),radial-gradient(circle at 88% 88%,rgba(159,255,207,.32) 0%,rgba(159,255,207,0) 36%),linear-gradient(180deg,#fff 0%,#f5fff9 46%,#eafff2 100%); }
+.checkout-shell { max-width: 940px; }
 .checkout-heading { text-align: center; }
 .test-payment-notice { display: flex; justify-content: center; gap: 12px; margin: 5px 0 35px; padding: 15px; border: 1px solid #f0c65d; border-radius: 10px; background: #fff8df; color: #674b00; }
-.checkout-grid { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(300px,.65fr); gap: 28px; align-items: start; }
-.checkout-form-card, .order-summary-card { padding: 34px; border: 1px solid #dfe7ee; border-radius: 16px; background: white; box-shadow: 0 14px 34px rgba(16,35,66,.06); }
+.checkout-grid { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(280px,.7fr); gap: 22px; align-items: start; }
+.checkout-form-card, .order-summary-card { padding: 28px; border: 1px solid #dfe7ee; border-radius: 16px; background: white; box-shadow: 0 14px 34px rgba(16,35,66,.06); }
 .checkout-form-card h2, .order-summary-card h2 { margin: 0 0 20px; font: 700 23px var(--font-serif); color: #102342; }
 .checkout-form-card h2:not(:first-child) { margin-top: 38px; }
 .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid input[readonly] { background: #f3f6f8; color: #526174; }
 .demo-values { padding: 13px 15px; border-radius: 8px; background: #edf6fb; color: #344a60; font-size: 13px; line-height: 1.65; }
+.payment-methods { display: grid; gap: 12px; margin: 20px 0 18px; padding: 0; border: 0; }
+.payment-provider-card { position: relative; display: grid; grid-template-columns: 22px 104px minmax(0,1fr) auto; align-items: center; gap: 13px; width: 100%; min-height: 82px; padding: 14px 16px; border: 1px solid #d9e2e8; border-radius: 12px; background: #fff; color: #102342; cursor: pointer; transition: border-color .2s ease,background-color .2s ease,box-shadow .2s ease; }
+.payment-provider-card input { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+.payment-provider-card-selected { border-color: #37ad82; background: #f1fcf7; box-shadow: 0 0 0 1px rgba(55,173,130,.12); }
+.payment-provider-card-selected:focus-within { outline: 3px solid rgba(55,173,130,.24); outline-offset: 2px; }
+.payment-provider-indicator { display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid #9aa7b3; border-radius: 50%; background: #fff; }
+.payment-provider-card-selected .payment-provider-indicator { border-color: #37ad82; }
+.payment-provider-card-selected .payment-provider-indicator::after { width: 10px; height: 10px; border-radius: 50%; background: #37ad82; content: ''; }
+.payment-provider-copy { display: grid; gap: 4px; color: #5a6878; font-size: 13px; line-height: 1.45; }
+.payment-provider-heading { color: #102342; font-size: 16px; }
+.payment-provider-logo { position: relative; display: grid; place-items: center; justify-self: end; overflow: hidden; flex: none; }
+.payment-provider-logo img { position: absolute; left: 50%; top: 50%; display: block; max-width: none; transform: translate(-50%,-50%); }
+.payment-provider-logo-stripe,.payment-provider-logo-paypal { width: 104px; height: 44px; }
+.payment-provider-logo-stripe { display: flex; align-items: center; justify-content: flex-start; gap: 7px; overflow: visible; border-radius: 10px; }
+.payment-provider-logo-stripe img { position: static; width: 38px; height: 38px; object-fit: contain; transform: none; }
+.payment-provider-logo-stripe strong { color: #635bff; font: 800 20px/1 Arial,sans-serif; letter-spacing: -.08em; }
+.payment-provider-logo-paypal img { width: 134px; height: 90px; object-fit: contain; }
+.payment-provider-card > .payment-provider-badge { justify-self: end; }
+.payment-provider-badge { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 84px; height: 26px; padding: 0 8px; border-radius: 999px; background: #edf0f2; color: #66727e; font-size: 10px; font-weight: 800; letter-spacing: .05em; white-space: nowrap; text-transform: uppercase; }
+.payment-provider-badge-test { background: #ddf7eb; color: #176c50; }
+.payment-provider-card-disabled { border-color: #e1e5e8; background: #f7f8f9; cursor: not-allowed; opacity: .68; }
+.checkout-provider-cta { width: 100%; }
+.checkout-section .primary-button,.success-section .primary-button { border: 1px solid #37ad82; background: #37ad82; color: #fff; box-shadow: 0 10px 22px rgba(55,173,130,.18); transition: transform .2s ease,background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease; }
+.checkout-section .primary-button:hover,.checkout-section .primary-button:focus-visible,.success-section .primary-button:hover,.success-section .primary-button:focus-visible { border-color: #37ad82; background: #e8fff7; color: #0f4c43; box-shadow: 0 10px 22px rgba(15,76,67,.12); }
+.checkout-section .primary-button:disabled { cursor: wait; opacity: .72; transform: none; }
+.success-section .secondary-button { border-color: #37ad82; background: #fff; color: #2e8b70; transition: background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease; }
+.success-section .secondary-button:hover,.success-section .secondary-button:focus-visible { border-color: #37ad82; background: #e8fff7; color: #0f4c43; box-shadow: 0 8px 18px rgba(15,76,67,.1); }
 .security-note { color: #6b7888; font-size: 12px; line-height: 1.6; }
 .order-summary-card { position: sticky; top: 106px; }
 .order-summary-card h3 { margin: 8px 0; color: #34485f; font-size: 18px; line-height: 1.5; }
 .order-summary-card .form-button { width: 100%; }
 
-.success-section { min-height: 680px; display: grid; place-items: center; padding: 80px 20px; background: linear-gradient(135deg,#eff8f5,#eef5fb); }
+.success-section { min-height: 680px; display: grid; place-items: center; padding: 80px 20px; background: radial-gradient(circle at 14% 12%,rgba(71,255,132,.25) 0%,rgba(71,255,132,0) 35%),radial-gradient(circle at 86% 86%,rgba(159,255,207,.34) 0%,rgba(159,255,207,0) 38%),linear-gradient(180deg,#fff 0%,#f4fff8 48%,#e9fff1 100%); }
 .success-card { width: min(100%, 650px); padding: 55px; text-align: center; border: 1px solid #dce8e3; border-radius: 22px; background: white; box-shadow: 0 24px 60px rgba(16,35,66,.12); }
 .success-icon { display: grid; place-items: center; width: 70px; height: 70px; margin: 0 auto 25px; border-radius: 50%; background: #2ea36b; color: white; font-size: 36px; font-weight: 800; }
+.success-icon.is-unsuccessful { background: #dc2626; color: white; }
 .success-card h2 { color: #34495f; font-size: 22px; }
 .success-price { color: #102342; font-size: 34px; font-weight: 800; }
 .transaction-reference { display: grid; gap: 7px; margin: 28px 0; padding: 18px; border-radius: 10px; background: #f3f6f8; }
 .transaction-reference span { color: #6a7787; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
+.transaction-reference strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+.invoice-pending-note { margin: 18px auto 0; max-width: 34rem; color: #6b7888; font-size: 12px; line-height: 1.6; }
 .success-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
 
 .learning-hero { padding: 65px 0; border-bottom: 1px solid #c8f0df; background: radial-gradient(circle at 82% 18%,rgba(32,217,104,.28) 0%,rgba(32,217,104,0) 36%),linear-gradient(135deg,#e8fff7 0%,#f4fff9 56%,#fff 100%); color: #0f4c43; }
@@ -360,6 +390,13 @@ img { display: block; max-width: 100%; }
     .cta-card { padding: 38px 25px; }
     .footer-grid { gap: 45px; }
     .account-card, .checkout-form-card, .order-summary-card, .success-card, .lesson-panel { padding: 26px 22px; }
+    .payment-provider-card { grid-template-columns: 22px 88px minmax(0,1fr); gap: 10px; padding: 14px 12px; }
+    .payment-provider-logo-stripe,.payment-provider-logo-paypal { width: 88px; }
+    .payment-provider-logo-stripe img { width: 34px; height: 34px; }
+    .payment-provider-logo-stripe strong { font-size: 18px; }
+    .payment-provider-logo-paypal img { width: 114px; height: 76px; }
+    .payment-provider-copy { padding-right: 72px; }
+    .payment-provider-card > .payment-provider-badge { position: absolute; right: 12px; top: 14px; }
     .catalogue-hero { padding: 65px 0; }
     .package-banner { align-items: flex-start; flex-direction: column; padding: 30px 24px; }
     .my-courses-grid, .two-columns { grid-template-columns: 1fr; }
@@ -370,6 +407,7 @@ img { display: block; max-width: 100%; }
     .product-detail-grid { gap: 40px; }
     .included-course-list { columns: 1; }
     .test-payment-notice { align-items: center; flex-direction: column; text-align: center; }
+    .payment-provider-card { padding: 15px 14px; }
     .lesson-nav { grid-template-columns: 1fr; }
     .lesson-nav a { border-right: 0; border-bottom: 1px solid #e6edf3; }
     .learning-hero { padding: 50px 0; }

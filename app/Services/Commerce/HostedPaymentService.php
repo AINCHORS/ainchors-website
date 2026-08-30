@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Commerce\Gateways\PayPalGateway;
 use App\Services\Commerce\Gateways\StripeGateway;
 use RuntimeException;
+use Throwable;
 
 class HostedPaymentService
 {
@@ -17,6 +18,7 @@ class HostedPaymentService
         private readonly PaymentService $payments,
         private readonly StripeGateway $stripe,
         private readonly PayPalGateway $paypal,
+        private readonly ExternalInvoiceService $externalInvoices,
     ) {}
 
     /** @return list<string> */
@@ -34,20 +36,12 @@ class HostedPaymentService
     /** @return array{order: Order, redirect_url: string} */
     public function start(User $user, Product $product, string $idempotencyKey, string $provider): array
     {
-        if ($product->isPackage()) {
-            throw new RuntimeException('Course package hosted payment is not enabled yet.');
-        }
-
-        if (! $product->isCourse() || $provider !== 'stripe') {
-            throw new RuntimeException('Hosted payment currently supports individual courses with Stripe only.');
-        }
-
         if (! in_array($provider, $this->availableProviders(), true)) {
             throw new RuntimeException('The selected payment provider is not configured.');
         }
 
         if ($provider === 'stripe') {
-            [$order, $payment] = $this->checkout->prepareStripeOrder($user, $product, $idempotencyKey);
+            [$order, $payment] = $this->checkout->prepareHostedOrder($user, $product, $idempotencyKey, 'stripe');
             $order->loadMissing(['user', 'items']);
 
             try {
@@ -66,12 +60,17 @@ class HostedPaymentService
             return ['order' => $order, 'redirect_url' => (string) $session['url']];
         }
 
-        // Preserved for the later PayPal phase. Current public hosted execution
-        // is deliberately gated to individual-course Stripe payments above.
-        $order = $this->checkout->prepareOrder($user, $product, $idempotencyKey);
+        [$order, $payment] = $this->checkout->prepareHostedOrder($user, $product, $idempotencyKey, 'paypal');
         $order->loadMissing(['user', 'items']);
-        $payPalOrder = $this->paypal->createOrder($order);
-        $this->payments->createPendingPayment($order, 'paypal', (string) $payPalOrder['id'], [
+        try {
+            $payPalOrder = $this->paypal->createOrder($order);
+        } catch (RuntimeException $exception) {
+            $this->payments->markAttemptFailed($payment, 'PayPal Order initialization failed.');
+
+            throw $exception;
+        }
+
+        $this->payments->attachProviderReference($payment, (string) $payPalOrder['id'], [
             'environment' => config('commerce.payment.environment'),
             'paypal_order_id' => $payPalOrder['id'],
         ]);
@@ -88,7 +87,7 @@ class HostedPaymentService
         $session = $this->stripe->retrieveSession($sessionId);
         $this->assertStripeSessionMatchesOrder($session, $order, $sessionId);
 
-        return $this->checkout->completeHostedPayment(
+        $completed = $this->checkout->completeHostedPayment(
             $order,
             'stripe',
             $sessionId,
@@ -96,6 +95,10 @@ class HostedPaymentService
             $this->stripeMajorAmount((int) ($session['amount_total'] ?? 0), (string) ($session['currency'] ?? '')),
             (string) ($session['currency'] ?? ''),
         );
+
+        $this->recordStripeInvoice($completed, $session);
+
+        return $completed;
     }
 
     public function completePayPalReturn(Order $order, string $payPalOrderId): Order
@@ -114,9 +117,7 @@ class HostedPaymentService
 
         $capture = $this->paypal->captureOrder($payPalOrderId, $order->idempotency_key.'-paypal-capture');
         $captureResource = data_get($capture, 'purchase_units.0.payments.captures.0', []);
-        if (($capture['status'] ?? null) !== 'COMPLETED' || blank(data_get($captureResource, 'id'))) {
-            throw new RuntimeException('PayPal has not confirmed this order as paid.');
-        }
+        $this->assertPayPalCaptureMatchesOrder($capture, $order, $payPalOrderId);
 
         return $this->checkout->completeHostedPayment(
             $order,
@@ -148,7 +149,7 @@ class HostedPaymentService
 
         $this->assertStripeSessionMatchesOrder($session, $order);
 
-        $this->checkout->completeHostedPayment(
+        $completed = $this->checkout->completeHostedPayment(
             $order,
             'stripe',
             (string) ($session['id'] ?? ''),
@@ -156,6 +157,8 @@ class HostedPaymentService
             $this->stripeMajorAmount((int) ($session['amount_total'] ?? 0), (string) ($session['currency'] ?? '')),
             (string) ($session['currency'] ?? ''),
         );
+
+        $this->recordStripeInvoice($completed, $session);
     }
 
     /** @param array<string, mixed> $capture */
@@ -197,6 +200,37 @@ class HostedPaymentService
     }
 
     /** @param array<string, mixed> $session */
+    private function recordStripeInvoice(Order $order, array $session): void
+    {
+        try {
+            $invoice = $session['invoice'] ?? null;
+            if (is_string($invoice) && $invoice !== '') {
+                $invoice = $this->stripe->retrieveInvoice($invoice);
+            }
+
+            if (! is_array($invoice)) {
+                return;
+            }
+
+            $invoiceId = (string) ($invoice['id'] ?? '');
+            $invoiceUrl = (string) ($invoice['hosted_invoice_url'] ?? $invoice['invoice_pdf'] ?? '');
+            if ($invoiceId === '' || $invoiceUrl === '') {
+                return;
+            }
+
+            $this->externalInvoices->record(
+                $order,
+                'stripe',
+                $invoiceId,
+                $invoiceUrl,
+                filled($invoice['number'] ?? null) ? (string) $invoice['number'] : null,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    /** @param array<string, mixed> $session */
     private function assertStripeSessionMatchesOrder(array $session, Order $order, ?string $expectedSessionId = null): void
     {
         $sessionId = (string) ($session['id'] ?? '');
@@ -213,6 +247,24 @@ class HostedPaymentService
             || ! is_numeric($amountTotal)
             || $currency === '') {
             throw new RuntimeException('Stripe has not confirmed this order as paid.');
+        }
+    }
+
+    /** @param array<string, mixed> $capture */
+    private function assertPayPalCaptureMatchesOrder(array $capture, Order $order, string $expectedOrderId): void
+    {
+        $purchaseUnit = (array) data_get($capture, 'purchase_units.0', []);
+        $captureResource = (array) data_get($purchaseUnit, 'payments.captures.0', []);
+        $relatedOrderId = (string) data_get($captureResource, 'supplementary_data.related_ids.order_id', $capture['id'] ?? '');
+        $reference = (string) ($purchaseUnit['reference_id'] ?? '');
+        $customId = (string) ($purchaseUnit['custom_id'] ?? '');
+
+        if (($capture['status'] ?? null) !== 'COMPLETED'
+            || blank($captureResource['id'] ?? null)
+            || ($relatedOrderId !== '' && $relatedOrderId !== $expectedOrderId)
+            || ($reference !== '' && $reference !== $order->order_number)
+            || ($customId !== '' && $customId !== $order->order_number)) {
+            throw new RuntimeException('PayPal has not confirmed this order as paid.');
         }
     }
 }

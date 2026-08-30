@@ -7,6 +7,10 @@ return [
     'settings' => [
         'welcome_modal_frequency' => 'every_page',
     ],
+    'countries' => [
+        'Australia', 'Canada', 'China', 'Hong Kong', 'Japan', 'Malaysia',
+        'New Zealand', 'Singapore', 'United Kingdom', 'United States', 'Other',
+    ],
     'navigation' => [
         ['label' => 'Home', 'url' => '/home'],
         ['label' => 'About us', 'url' => '/about-us'],

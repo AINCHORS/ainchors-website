@@ -24,11 +24,11 @@
             ['label' => 'Orders', 'value' => data_get($metrics, 'total_orders', 0), 'detail' => 'All recorded orders'],
             ['label' => 'Awaiting payment', 'value' => data_get($metrics, 'awaiting_payment_orders', 0), 'detail' => 'Pending / awaiting orders'],
             ['label' => 'Completed orders', 'value' => data_get($metrics, 'completed_orders', 0), 'detail' => 'Completed order records'],
-            ['label' => 'Paid payments', 'value' => data_get($metrics, 'paid_payments', 0), 'detail' => 'Payment status = paid'],
+            ['label' => 'Paid payments', 'value' => data_get($metrics, 'paid_payments', 0), 'detail' => 'Verified live payments'],
             ['label' => 'Pending payments', 'value' => data_get($metrics, 'pending_payments', 0), 'detail' => 'Pending or processing'],
             ['label' => 'Failed payments', 'value' => data_get($metrics, 'failed_payments', 0), 'detail' => 'Failed payment records'],
-            ['label' => 'Demo / test', 'value' => data_get($metrics, 'test_payments', 0), 'detail' => 'Provider = demo'],
-            ['label' => 'Non-demo provider', 'value' => data_get($metrics, 'non_demo_payments', 0), 'detail' => 'Environment not inferred yet'],
+            ['label' => 'Demo / test', 'value' => data_get($metrics, 'test_payments', 0), 'detail' => 'Excluded from totals'],
+            ['label' => 'Live provider records', 'value' => data_get($metrics, 'live_provider_payments', 0), 'detail' => 'Environment = live'],
         ];
 
         $pipelineCards = [
@@ -67,7 +67,7 @@
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h2 id="commerce-heading" class="font-heading text-xl font-bold text-ainchors-navy">Commerce health</h2>
-                <p class="mt-1 text-sm text-ainchors-grey-dark">Demo payments are test data. Phase 1 does not infer a live environment for non-demo rows.</p>
+                <p class="mt-1 text-sm text-ainchors-grey-dark">Live provider activity is separated from Demo, Sandbox and unknown payment records.</p>
             </div>
             <div class="flex gap-4 text-sm font-semibold"><a href="{{ route('admin.orders.index') }}" class="text-ainchors-green hover:text-ainchors-navy">Orders</a><a href="{{ route('admin.payments.index') }}" class="text-ainchors-green hover:text-ainchors-navy">Payments</a></div>
         </div>
@@ -95,24 +95,33 @@
         </div>
     </section>
 
-    <section aria-labelledby="revenue-heading" class="mt-8 rounded-ainchors-card border border-ainchors-navy/10 bg-white p-5 shadow-sm sm:p-6">
-        <h2 id="revenue-heading" class="font-heading text-2xl font-bold text-ainchors-navy">Paid payment totals</h2>
-        <p class="mt-1 text-sm leading-relaxed text-ainchors-grey-dark">Amounts remain separated by currency and provider. A Demo/test payment is test data and must not be read as production revenue.</p>
-        <div class="mt-5 overflow-x-auto">
-            <table class="w-full min-w-[40rem] text-left text-sm">
-                <thead class="border-b border-ainchors-navy/10 text-xs uppercase tracking-wide text-ainchors-grey-dark"><tr><th class="pb-3 pr-5 font-bold">Currency</th><th class="pb-3 pr-5 font-bold">Provider</th><th class="pb-3 pr-5 font-bold">Environment</th><th class="pb-3 pr-5 text-right font-bold">Payments</th><th class="pb-3 text-right font-bold">Amount</th></tr></thead>
+    <section aria-labelledby="revenue-heading" class="mt-8 overflow-hidden rounded-ainchors-card border border-ainchors-navy/10 bg-white shadow-sm">
+        <div class="border-b border-ainchors-navy/10 px-5 py-4 sm:px-6">
+            <h2 id="revenue-heading" class="font-heading text-xl font-bold text-ainchors-navy">Paid payment totals</h2>
+            <p class="mt-1 text-sm text-ainchors-grey-dark">Only verified live payments are included. Demo, Sandbox and unknown-environment payments remain in payment records but are excluded from these totals.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[36rem] text-left text-sm">
+                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-ainchors-grey-dark">
+                    <tr>
+                        <th class="px-5 py-3 sm:px-6">Currency</th>
+                        <th class="px-5 py-3 sm:px-6">Provider</th>
+                        <th class="px-5 py-3 text-right sm:px-6">Payments</th>
+                        <th class="px-5 py-3 text-right sm:px-6">Amount</th>
+                    </tr>
+                </thead>
                 <tbody class="divide-y divide-ainchors-navy/8">
                     @forelse ($revenueByCurrency as $row)
-                        @php($isDemo = strtolower((string) ($row->provider ?? '')) === 'demo')
                         <tr>
-                            <td class="py-3 pr-5 font-semibold text-ainchors-navy">{{ $row->currency }}</td>
-                            <td class="py-3 pr-5 text-ainchors-grey-dark">{{ $row->provider }}</td>
-                            <td class="py-3 pr-5"><span @class(['rounded-full px-2.5 py-1 text-xs font-bold', 'bg-amber-100 text-amber-900' => $isDemo, 'bg-slate-100 text-ainchors-navy' => ! $isDemo])>{{ $isDemo ? 'Demo/test payment' : 'Not tracked yet' }}</span></td>
-                            <td class="py-3 pr-5 text-right text-ainchors-grey-dark">{{ number_format((int) $row->payment_count) }}</td>
-                            <td class="py-3 text-right font-semibold text-ainchors-navy">{{ $row->currency }} {{ number_format((float) $row->total_amount, 2) }}</td>
+                            <td class="px-5 py-3 font-semibold text-ainchors-navy sm:px-6">{{ $row->currency }}</td>
+                            <td class="px-5 py-3 text-ainchors-grey-dark sm:px-6">{{ str($row->provider)->headline() }}</td>
+                            <td class="px-5 py-3 text-right text-ainchors-navy sm:px-6">{{ number_format((int) $row->payment_count) }}</td>
+                            <td class="px-5 py-3 text-right font-semibold text-ainchors-navy sm:px-6">{{ $row->currency }} {{ number_format((float) $row->total_amount, 2) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="py-8 text-center text-ainchors-grey-dark">No paid payments have been recorded yet.</td></tr>
+                        <tr>
+                            <td colspan="4" class="px-5 py-6 text-center text-ainchors-grey-dark sm:px-6">No verified live payments recorded.</td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -132,12 +141,12 @@
         </section>
 
         <section class="rounded-ainchors-card border border-ainchors-navy/10 bg-white p-5 shadow-sm sm:p-6">
-            <div class="flex items-center justify-between gap-3"><h2 class="font-heading text-xl font-bold text-ainchors-navy">Recent payments</h2><a href="{{ route('admin.payments.index') }}" class="text-sm font-semibold text-ainchors-green hover:text-ainchors-navy">View all</a></div>
+            <div class="flex items-center justify-between gap-3"><h2 class="font-heading text-xl font-bold text-ainchors-navy">Recent payments</h2><a href="{{ route('admin.payments.index') }}" class="text-sm font-semibold text-ainchors-green hover:text-ainchors-navy">View all records</a></div>
             <div class="mt-4 divide-y divide-ainchors-navy/8">
                 @forelse ($recentPayments as $payment)
-                    <a href="{{ route('admin.payments.show', $payment) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $payment->provider }} · {{ $payment->order?->order_number ?? 'Order unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $payment->order?->user?->full_name ?? 'Customer unavailable' }}</p></div><div class="text-right"><p class="font-semibold text-ainchors-navy">{{ $payment->currency }} {{ number_format((float) $payment->amount, 2) }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ str($payment->status)->headline() }}{{ strtolower($payment->provider) === 'demo' ? ' · Test' : '' }}</p></div></a>
+                    <a href="{{ route('admin.payments.show', $payment) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $payment->provider }} · {{ $payment->order?->order_number ?? 'Order unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $payment->order?->user?->full_name ?? 'Customer unavailable' }}</p></div><div class="text-right"><p class="font-semibold text-ainchors-navy">{{ $payment->currency }} {{ number_format((float) $payment->amount, 2) }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ str($payment->status)->headline() }} · {{ str($payment->payment_environment ?? 'unknown')->headline() }}</p></div></a>
                 @empty
-                    <p class="py-8 text-center text-sm text-ainchors-grey-dark">No payments recorded.</p>
+                    <p class="py-8 text-center text-sm text-ainchors-grey-dark">No payment records recorded.</p>
                 @endforelse
             </div>
         </section>

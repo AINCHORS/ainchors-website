@@ -103,6 +103,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/complete', [ProfileController::class, 'complete'])->name('profile.complete');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/purchase-history', PurchaseHistoryController::class)->name('purchase-history');
     Route::get('/purchase-history/invoices/{externalInvoice}', ExternalInvoiceRedirectController::class)->name('purchase-history.invoice');
@@ -111,6 +112,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/payments/stripe/{order:order_number}/return', [HostedPaymentController::class, 'stripeReturn'])->name('payments.stripe.return');
     Route::get('/payments/paypal/{order:order_number}/return', [HostedPaymentController::class, 'paypalReturn'])->name('payments.paypal.return');
     Route::get('/payments/{provider}/{order:order_number}/cancel', [HostedPaymentController::class, 'cancel'])->name('payments.cancel');
+    Route::get('/orders/{order:order_number}/payment-unsuccessful', [HostedPaymentController::class, 'failed'])->name('checkout.failed');
     Route::get('/orders/{order:order_number}/success', PaymentSuccessController::class)->name('checkout.success');
     Route::get('/my-courses', MyCoursesController::class)->name('my-courses');
     Route::get('/learn/{course:slug}', CourseLearningController::class)->name('learn.show');

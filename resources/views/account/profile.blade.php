@@ -20,7 +20,7 @@
         <div class="grid gap-6 lg:grid-cols-2">
             <article class="rounded-ainchors-card border border-ainchors-grey-light/25 bg-ainchors-white p-6 shadow-lg shadow-ainchors-navy/5 sm:p-8">
                 <h2 class="font-heading text-2xl font-bold text-ainchors-navy">Personal details</h2>
-                <p class="mt-2 font-sans text-sm leading-relaxed text-ainchors-grey-dark">Update the name and email address used for your account.</p>
+                <p class="mt-2 font-sans text-sm leading-relaxed text-ainchors-grey-dark">Keep your identity, contact details and home address up to date.</p>
 
                 @if (session('profile_success'))
                     <p role="status" class="mt-5 rounded-ainchors-button border border-ainchors-green/35 bg-ainchors-green-hero px-4 py-3 font-sans text-sm text-ainchors-navy">{{ session('profile_success') }}</p>
@@ -29,11 +29,7 @@
                 <form method="POST" action="{{ route('profile.update') }}" class="mt-6 space-y-5">
                     @csrf
                     @method('PATCH')
-                    <div class="space-y-2">
-                        <label for="profile-name" class="block font-sans text-sm font-semibold text-ainchors-navy">Name</label>
-                        <input id="profile-name" name="full_name" type="text" value="{{ old('full_name', $user->full_name) }}" autocomplete="name" required @error('full_name') aria-describedby="profile-name-error" aria-invalid="true" @enderror class="block w-full rounded-ainchors-button border border-ainchors-grey-light/45 bg-ainchors-white px-4 py-3 font-sans text-ainchors-body text-ainchors-navy shadow-sm outline-none transition focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25">
-                        @error('full_name')<p id="profile-name-error" role="alert" class="font-sans text-sm text-red-700">{{ $message }}</p>@enderror
-                    </div>
+                    @include('account.partials.personal-details-fields', ['user' => $user])
                     <div class="space-y-2">
                         <label for="profile-email" class="block font-sans text-sm font-semibold text-ainchors-navy">Email</label>
                         <input id="profile-email" name="email" type="email" value="{{ old('email', $user->email) }}" autocomplete="email" required @error('email') aria-describedby="profile-email-error" aria-invalid="true" @enderror class="block w-full rounded-ainchors-button border border-ainchors-grey-light/45 bg-ainchors-white px-4 py-3 font-sans text-ainchors-body text-ainchors-navy shadow-sm outline-none transition focus:border-ainchors-green focus:ring-2 focus:ring-ainchors-green/25">

@@ -94,11 +94,37 @@ npm run build
 The twenty binaries described in `docs/COURSE-ASSETS.md` must be restored to
 private storage on a new machine because Git intentionally excludes them.
 
-## Replacing the demo gateway later
+## Hosted Stripe and PayPal setup
 
-A real provider should replace the implementation behind `PaymentService` and
-introduce provider confirmation/webhook handling. Product pricing, orders,
-package relations, enrollment rules, authentication, course authorization, and
-the learning UI remain unchanged. Enrollment must only be granted after the
-provider has authoritatively confirmed a paid transaction. Never pass raw card
-data through this application.
+Hosted checkout supports one-time `course`, `course_package`, `consulting`, and
+`service` products. The browser never supplies authoritative product, amount,
+currency, or access data. Stripe Checkout Sessions and PayPal Orders v2 are
+created on the server, and access/order completion occurs only after a verified
+provider response. Demo and sandbox payments stay marked as test records and
+are excluded from live revenue totals.
+
+Configure sandbox first:
+
+```dotenv
+PAYMENT_DRIVER=hosted
+PAYMENT_ENVIRONMENT=sandbox
+PAYMENT_PROVIDERS=stripe,paypal
+STRIPE_SECRET=rk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+PAYPAL_CLIENT_ID=...
+PAYPAL_CLIENT_SECRET=...
+PAYPAL_WEBHOOK_ID=...
+```
+
+Register these public HTTPS webhook URLs in the matching provider environment:
+
+- Stripe: `https://YOUR-DOMAIN/payments/stripe/webhook`, including
+  `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
+- PayPal: `https://YOUR-DOMAIN/payments/paypal/webhook`, including
+  `PAYMENT.CAPTURE.COMPLETED`.
+
+For production, create separate live credentials and webhook endpoints, then
+set `PAYMENT_ENVIRONMENT=live`. Prefer a least-privilege Stripe restricted key.
+Never put secret keys in Blade, JavaScript, Git, screenshots, logs, or support
+messages. After changing environment values, clear Laravel's cached config with
+`php artisan optimize:clear`.

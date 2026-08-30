@@ -51,7 +51,7 @@ class PaymentController extends Controller
         // generic admin display. Financial records remain read-only routes.
         return Payment::query()->select([
             'id', 'order_id', 'provider', 'provider_transaction_id',
-            'amount', 'currency', 'status', 'paid_at', 'failure_reason',
+            'payment_environment', 'amount', 'currency', 'status', 'paid_at', 'failure_reason',
             'created_at', 'updated_at',
         ]);
     }

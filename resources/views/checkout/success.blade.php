@@ -16,14 +16,28 @@
         <p class="success-price">{{ $order->currency }} {{ number_format((float) $order->total_amount, 0) }}</p>
         @if ($product->isPackage())
             <p><strong>{{ $product->bundleProducts()->count() }} Courses Unlocked</strong></p>
-        @else
+        @elseif ($product->isCourse())
             <p>Your course is now available.</p>
+        @else
+            <p>Your service order is confirmed. The AINCHORS team can now follow up from the recorded order.</p>
         @endif
         <div class="transaction-reference"><span>Transaction Reference</span><strong>{{ $payment?->provider_transaction_id }}</strong></div>
         <div class="success-actions">
             @if ($product->isCourse())<a class="primary-button" href="{{ route('learn.show', $product) }}">Access Course</a>@endif
-            <a class="secondary-button" href="{{ route('my-courses') }}">{{ $product->isPackage() ? 'Go to My Courses' : 'My Courses' }}</a>
+            @if ($product->isCourse() || $product->isPackage())
+                <a class="secondary-button" href="{{ route('my-courses') }}">{{ $product->isPackage() ? 'Go to My Courses' : 'My Courses' }}</a>
+            @else
+                <a class="secondary-button" href="{{ route('purchase-history') }}">Purchase History</a>
+            @endif
+            @if ($invoice)
+                <a class="secondary-button" href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer">View Invoice</a>
+            @endif
         </div>
+        @if (! $invoice && $payment?->provider === 'stripe')
+            <p class="invoice-pending-note">The Stripe invoice is being prepared and will appear in Purchase History when available.</p>
+        @elseif (! $invoice)
+            <p class="invoice-pending-note">The verified payment and order reference are available in Purchase History.</p>
+        @endif
     </div>
 </section>
 @endsection

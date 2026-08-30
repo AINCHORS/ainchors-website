@@ -43,7 +43,7 @@ return [
         // server-side provider integration must explicitly allow its HTTPS host.
         'trusted_hosts' => array_values(array_filter(array_map(
             static fn (string $host): string => strtolower(trim($host)),
-            explode(',', (string) env('INVOICE_TRUSTED_HOSTS', '')),
+            explode(',', (string) env('INVOICE_TRUSTED_HOSTS', 'invoice.stripe.com')),
         ))),
     ],
 ];

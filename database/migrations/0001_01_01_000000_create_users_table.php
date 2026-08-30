@@ -16,10 +16,18 @@ return new class extends Migration
                 $table->id();
                 $table->enum('role', ['user', 'admin'])->default('user')->index();
                 $table->string('full_name');
+                $table->string('first_name')->nullable();
+                $table->string('last_name')->nullable();
+                $table->date('date_of_birth')->nullable();
                 $table->string('email')->unique();
                 $table->string('password');
                 $table->string('phone', 50)->nullable();
                 $table->string('country', 100)->nullable();
+                $table->string('address_line_1')->nullable();
+                $table->string('address_line_2')->nullable();
+                $table->string('city', 120)->nullable();
+                $table->string('state', 120)->nullable();
+                $table->string('postal_code', 30)->nullable();
                 $table->string('profile_picture', 500)->nullable();
                 $table->enum('status', ['active', 'inactive', 'blocked'])->default('active')->index();
                 $table->timestamp('email_verified_at')->nullable();
