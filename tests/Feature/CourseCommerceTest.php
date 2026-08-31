@@ -269,6 +269,10 @@ class CourseCommerceTest extends TestCase
             'status' => 'paid',
         ]);
         $this->assertDatabaseCount('enrollments', 10);
+        $this->actingAs($user)->get(route('purchase-history'))
+            ->assertOk()
+            ->assertSee('My Courses')
+            ->assertDontSee('No action available');
     }
 
     public function test_stripe_hosted_service_payment_completes_order_without_creating_course_access(): void
