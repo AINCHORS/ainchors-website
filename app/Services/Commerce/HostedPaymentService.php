@@ -169,7 +169,7 @@ class HostedPaymentService
         $payPalOrderId = (string) data_get($capture, 'supplementary_data.related_ids.order_id', '');
         $payment = Payment::query()
             ->where('provider', 'paypal')
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'processing'])
             ->get()
             ->first(fn (Payment $candidate): bool => data_get($candidate->provider_data, 'paypal_order_id') === $payPalOrderId);
 
@@ -273,9 +273,11 @@ class HostedPaymentService
         $reference = (string) ($purchaseUnit['reference_id'] ?? '');
         $customId = (string) ($purchaseUnit['custom_id'] ?? '');
 
-        if (($capture['status'] ?? null) !== 'COMPLETED'
+        if ((string) ($capture['id'] ?? '') !== $expectedOrderId
+            || ($capture['status'] ?? null) !== 'COMPLETED'
             || blank($captureResource['id'] ?? null)
-            || ($relatedOrderId !== '' && $relatedOrderId !== $expectedOrderId)
+            || ($captureResource['status'] ?? null) !== 'COMPLETED'
+            || $relatedOrderId !== $expectedOrderId
             || ($reference !== '' && $reference !== $order->order_number)
             || ($customId !== '' && $customId !== $order->order_number)) {
             throw new RuntimeException('PayPal has not confirmed this order as paid.');
