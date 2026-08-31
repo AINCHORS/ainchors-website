@@ -44,7 +44,7 @@ return [
         'provider_hosts' => [
             'stripe' => array_values(array_filter(array_map(
                 static fn (string $host): string => strtolower(trim($host)),
-                explode(',', (string) env('STRIPE_INVOICE_HOSTS', 'invoice.stripe.com')),
+                explode(',', (string) env('STRIPE_INVOICE_HOSTS', 'invoice.stripe.com,pay.stripe.com')),
             ))),
         ],
     ],
