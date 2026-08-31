@@ -389,6 +389,44 @@ class HostedPaymentAuditTest extends TestCase
         $this->assertDatabaseCount('enrollments', 0);
     }
 
+    public function test_invalid_payment_configuration_and_live_demo_checkout_fail_closed(): void
+    {
+        $user = User::factory()->create();
+        $course = Product::query()->where('sku', 'SL-AI-001')->firstOrFail();
+
+        config([
+            'commerce.payment.driver' => 'hostd',
+            'commerce.payment.environment' => 'sandbox',
+        ]);
+        $this->actingAs($user)->get(route('checkout.show', $course))->assertStatus(503);
+
+        config([
+            'commerce.payment.driver' => 'demo',
+            'commerce.payment.environment' => 'live',
+        ]);
+        $this->actingAs($user)->get(route('checkout.show', $course))->assertStatus(503);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('enrollments', 0);
+    }
+
+    public function test_demo_service_cannot_complete_an_order_outside_sandbox(): void
+    {
+        config([
+            'commerce.payment.driver' => 'demo',
+            'commerce.payment.environment' => 'live',
+        ]);
+
+        $user = User::factory()->create();
+        $course = Product::query()->where('sku', 'SL-AI-001')->firstOrFail();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Demo checkout is not enabled');
+        app(\App\Services\Commerce\CheckoutService::class)
+            ->purchase($user, $course, 'live-demo-must-fail');
+    }
+
     public function test_live_ready_configuration_uses_live_labels_and_paypal_api_without_a_live_charge(): void
     {
         config([
