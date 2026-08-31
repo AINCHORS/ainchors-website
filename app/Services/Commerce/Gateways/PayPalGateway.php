@@ -32,7 +32,6 @@ class PayPalGateway
                     'purchase_units' => [[
                         'reference_id' => $order->order_number,
                         'custom_id' => $order->order_number,
-                        'invoice_id' => $order->order_number,
                         'description' => $item->product_name,
                         'amount' => [
                             'currency_code' => strtoupper($order->currency),
