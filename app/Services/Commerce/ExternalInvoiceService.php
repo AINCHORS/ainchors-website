@@ -31,6 +31,15 @@ class ExternalInvoiceService
             throw new InvalidArgumentException('The external invoice data is not valid or trusted.');
         }
 
+        $existing = ExternalInvoice::query()
+            ->where('provider', $provider)
+            ->where('external_reference', $externalReference)
+            ->first();
+
+        if ($existing && $existing->order_id !== $order->id) {
+            throw new InvalidArgumentException('A provider invoice cannot be reassigned to a different order.');
+        }
+
         return ExternalInvoice::query()->updateOrCreate(
             ['provider' => $provider, 'external_reference' => $externalReference],
             [
