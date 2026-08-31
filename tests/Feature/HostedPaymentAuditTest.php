@@ -133,6 +133,9 @@ class HostedPaymentAuditTest extends TestCase
         }
 
         $this->assertSame(3, Payment::query()->where('provider', 'paypal')->where('status', 'paid')->count());
+        Http::assertSent(fn (ClientRequest $request): bool => str_ends_with($request->url(), '/capture')
+            && $request->method() === 'POST'
+            && $request->body() === '{}');
     }
 
     public function test_environment_configuration_and_provider_evidence_must_agree(): void

@@ -163,6 +163,11 @@ class CourseCommerceTest extends TestCase
     public function test_hosted_checkout_rejects_unconfigured_paypal_and_supports_course_packages_with_stripe(): void
     {
         $this->enableStripeHostedCheckout(['stripe', 'paypal']);
+        config([
+            'commerce.payment.paypal.client_id' => null,
+            'commerce.payment.paypal.client_secret' => null,
+            'commerce.payment.paypal.webhook_id' => null,
+        ]);
         Http::fake(fn () => Http::response([
             'id' => 'cs_test_package',
             'url' => 'https://checkout.stripe.test/package',

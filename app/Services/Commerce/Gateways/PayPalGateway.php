@@ -72,7 +72,8 @@ class PayPalGateway
                     'PayPal-Request-Id' => $this->requestId($requestId),
                     'Prefer' => 'return=representation',
                 ])
-                ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($payPalOrderId).'/capture'), []);
+                ->withBody('{}', 'application/json')
+                ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($payPalOrderId).'/capture'));
         } catch (Throwable $exception) {
             throw new RuntimeException('PayPal could not verify and capture this payment.', previous: $exception);
         }
