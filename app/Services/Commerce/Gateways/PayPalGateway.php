@@ -6,6 +6,7 @@ use App\Models\Order;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
 
 class PayPalGateway
 {
@@ -20,31 +21,35 @@ class PayPalGateway
     public function createOrder(Order $order): array
     {
         $item = $order->items->firstOrFail();
-        $response = $this->client()
-            ->withHeaders([
-                'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-create'),
-                'Prefer' => 'return=representation',
-            ])
-            ->post($this->apiUrl('/v2/checkout/orders'), [
-                'intent' => 'CAPTURE',
-                'purchase_units' => [[
-                    'reference_id' => $order->order_number,
-                    'custom_id' => $order->order_number,
-                    'invoice_id' => $order->order_number,
-                    'description' => $item->product_name,
-                    'amount' => [
-                        'currency_code' => strtoupper($order->currency),
-                        'value' => $this->formattedAmount($order->total_amount, $order->currency),
+        try {
+            $response = $this->client()
+                ->withHeaders([
+                    'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-create'),
+                    'Prefer' => 'return=representation',
+                ])
+                ->post($this->apiUrl('/v2/checkout/orders'), [
+                    'intent' => 'CAPTURE',
+                    'purchase_units' => [[
+                        'reference_id' => $order->order_number,
+                        'custom_id' => $order->order_number,
+                        'invoice_id' => $order->order_number,
+                        'description' => $item->product_name,
+                        'amount' => [
+                            'currency_code' => strtoupper($order->currency),
+                            'value' => $this->formattedAmount($order->total_amount, $order->currency),
+                        ],
+                    ]],
+                    'application_context' => [
+                        'brand_name' => 'AINCHORS',
+                        'shipping_preference' => 'NO_SHIPPING',
+                        'user_action' => 'PAY_NOW',
+                        'return_url' => route('payments.paypal.return', $order),
+                        'cancel_url' => route('payments.cancel', ['order' => $order, 'provider' => 'paypal']),
                     ],
-                ]],
-                'application_context' => [
-                    'brand_name' => 'AINCHORS',
-                    'shipping_preference' => 'NO_SHIPPING',
-                    'user_action' => 'PAY_NOW',
-                    'return_url' => route('payments.paypal.return', $order),
-                    'cancel_url' => route('payments.cancel', ['order' => $order, 'provider' => 'paypal']),
-                ],
-            ]);
+                ]);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('PayPal could not start the hosted checkout. Please try again.', previous: $exception);
+        }
 
         $data = $response->json();
         $approval = collect(data_get($data, 'links', []))->firstWhere('rel', 'approve');
@@ -61,12 +66,16 @@ class PayPalGateway
     /** @return array<string, mixed> */
     public function captureOrder(string $payPalOrderId, string $requestId): array
     {
-        $response = $this->client()
-            ->withHeaders([
-                'PayPal-Request-Id' => $this->requestId($requestId),
-                'Prefer' => 'return=representation',
-            ])
-            ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($payPalOrderId).'/capture'), []);
+        try {
+            $response = $this->client()
+                ->withHeaders([
+                    'PayPal-Request-Id' => $this->requestId($requestId),
+                    'Prefer' => 'return=representation',
+                ])
+                ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($payPalOrderId).'/capture'), []);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('PayPal could not verify and capture this payment.', previous: $exception);
+        }
 
         if (! $response->successful()) {
             throw new RuntimeException('PayPal could not verify and capture this payment.');
@@ -83,15 +92,19 @@ class PayPalGateway
             throw new RuntimeException('PayPal webhook verification is not configured.');
         }
 
-        $response = $this->client()->post($this->apiUrl('/v1/notifications/verify-webhook-signature'), [
-            'auth_algo' => $headers['paypal-auth-algo'] ?? null,
-            'cert_url' => $headers['paypal-cert-url'] ?? null,
-            'transmission_id' => $headers['paypal-transmission-id'] ?? null,
-            'transmission_sig' => $headers['paypal-transmission-sig'] ?? null,
-            'transmission_time' => $headers['paypal-transmission-time'] ?? null,
-            'webhook_id' => $webhookId,
-            'webhook_event' => $event,
-        ]);
+        try {
+            $response = $this->client()->post($this->apiUrl('/v1/notifications/verify-webhook-signature'), [
+                'auth_algo' => $headers['paypal-auth-algo'] ?? null,
+                'cert_url' => $headers['paypal-cert-url'] ?? null,
+                'transmission_id' => $headers['paypal-transmission-id'] ?? null,
+                'transmission_sig' => $headers['paypal-transmission-sig'] ?? null,
+                'transmission_time' => $headers['paypal-transmission-time'] ?? null,
+                'webhook_id' => $webhookId,
+                'webhook_event' => $event,
+            ]);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('PayPal webhook verification failed.', previous: $exception);
+        }
 
         return $response->successful() && $response->json('verification_status') === 'SUCCESS';
     }
@@ -109,10 +122,14 @@ class PayPalGateway
             throw new RuntimeException('PayPal is not configured.');
         }
 
-        $response = Http::asForm()
-            ->withBasicAuth($clientId, $secret)
-            ->timeout(20)
-            ->post($this->apiUrl('/v1/oauth2/token'), ['grant_type' => 'client_credentials']);
+        try {
+            $response = Http::asForm()
+                ->withBasicAuth($clientId, $secret)
+                ->timeout(20)
+                ->post($this->apiUrl('/v1/oauth2/token'), ['grant_type' => 'client_credentials']);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('PayPal authentication failed.', previous: $exception);
+        }
 
         $token = (string) $response->json('access_token');
         if (! $response->successful() || $token === '') {

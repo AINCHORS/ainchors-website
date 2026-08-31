@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ConsultationController as AdminConsultationContro
 use App\Http\Controllers\Admin\CourseContentController as AdminCourseContentController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EnrollmentController as AdminEnrollmentController;
+use App\Http\Controllers\Admin\ExternalInvoiceRedirectController as AdminExternalInvoiceRedirectController;
 use App\Http\Controllers\Admin\JobApplicationController as AdminJobApplicationController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
@@ -155,6 +156,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::get('/payments', [AdminPaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{payment}', [AdminPaymentController::class, 'show'])->name('payments.show');
+    Route::get('/invoices/{externalInvoice}', AdminExternalInvoiceRedirectController::class)->name('invoices.show');
 
     Route::get('/enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
     Route::post('/enrollments', [AdminEnrollmentController::class, 'store'])->name('enrollments.store');

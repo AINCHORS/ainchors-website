@@ -103,16 +103,18 @@ class HostedPaymentService
 
     public function completePayPalReturn(Order $order, string $payPalOrderId): Order
     {
-        if ($order->status === 'completed') {
-            return $order->fresh(['items.product', 'payments']);
-        }
-
         $payment = $order->payments()
             ->where('provider', 'paypal')
-            ->where('provider_transaction_id', $payPalOrderId)
-            ->first();
+            ->get()
+            ->first(fn (Payment $candidate): bool => $candidate->provider_transaction_id === $payPalOrderId
+                || data_get($candidate->provider_data, 'paypal_order_id') === $payPalOrderId);
         if (! $payment) {
             throw new RuntimeException('This PayPal order does not belong to the AINCHORS order.');
+        }
+        $this->assertPaymentEnvironment($payment);
+
+        if ($order->status === 'completed' && $payment->status === 'paid') {
+            return $order->fresh(['items.product', 'payments']);
         }
 
         $capture = $this->paypal->captureOrder($payPalOrderId, $order->idempotency_key.'-paypal-capture');
@@ -174,6 +176,7 @@ class HostedPaymentService
         if (! $payment || ($capture['status'] ?? null) !== 'COMPLETED') {
             return;
         }
+        $this->assertPaymentEnvironment($payment);
 
         $this->checkout->completeHostedPayment(
             $payment->order,
@@ -238,16 +241,27 @@ class HostedPaymentService
         $clientReference = (string) ($session['client_reference_id'] ?? '');
         $amountTotal = $session['amount_total'] ?? null;
         $currency = (string) ($session['currency'] ?? '');
+        $expectedLiveMode = config('commerce.payment.environment') === 'live';
+        $payment = $order->payments()
+            ->where('provider', 'stripe')
+            ->where('provider_transaction_id', $sessionId)
+            ->first();
 
         if ($sessionId === ''
             || ($expectedSessionId !== null && $sessionId !== $expectedSessionId)
             || $orderNumber !== $order->order_number
             || $clientReference !== $order->order_number
             || ($session['payment_status'] ?? null) !== 'paid'
+            || ! array_key_exists('livemode', $session)
+            || ! is_bool($session['livemode'])
+            || $session['livemode'] !== $expectedLiveMode
             || ! is_numeric($amountTotal)
-            || $currency === '') {
+            || $currency === ''
+            || ! $payment) {
             throw new RuntimeException('Stripe has not confirmed this order as paid.');
         }
+
+        $this->assertPaymentEnvironment($payment);
     }
 
     /** @param array<string, mixed> $capture */
@@ -265,6 +279,16 @@ class HostedPaymentService
             || ($reference !== '' && $reference !== $order->order_number)
             || ($customId !== '' && $customId !== $order->order_number)) {
             throw new RuntimeException('PayPal has not confirmed this order as paid.');
+        }
+    }
+
+    private function assertPaymentEnvironment(Payment $payment): void
+    {
+        $expected = config('commerce.payment.environment') === 'live' ? 'live' : 'test';
+
+        if ($payment->payment_environment !== $expected
+            || data_get($payment->provider_data, 'environment') !== config('commerce.payment.environment')) {
+            throw new RuntimeException('The payment environment does not match the configured provider environment.');
         }
     }
 }

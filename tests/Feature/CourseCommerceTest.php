@@ -125,6 +125,7 @@ class CourseCommerceTest extends TestCase
                 'payment_status' => 'paid',
                 'amount_total' => 1900,
                 'currency' => 'usd',
+                'livemode' => false,
             ], 200);
         });
 

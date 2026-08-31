@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Services\Commerce\ExternalInvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -36,13 +37,17 @@ class PaymentController extends Controller
         return view('admin.payments.index', compact('payments'));
     }
 
-    public function show(Payment $payment): View
+    public function show(Payment $payment, ExternalInvoiceService $invoices): View
     {
         $payment = $this->safePaymentQuery()
             ->with($this->safeOrderRelation())
             ->findOrFail($payment->getKey());
 
-        return view('admin.payments.show', compact('payment'));
+        $invoice = $payment->order
+            ? $invoices->customerFacingInvoiceFor($payment->order)
+            : null;
+
+        return view('admin.payments.show', compact('payment', 'invoice'));
     }
 
     private function safePaymentQuery()
@@ -65,7 +70,10 @@ class PaymentController extends Controller
                     'id', 'order_number', 'user_id', 'status', 'currency',
                     'total_amount', 'placed_at', 'created_at',
                 ])
-                ->with('user:id,full_name,email,role,status'),
+                ->with([
+                    'user:id,full_name,email,role,status',
+                    'externalInvoices',
+                ]),
         ];
     }
 }

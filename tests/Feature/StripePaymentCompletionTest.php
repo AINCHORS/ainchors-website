@@ -220,6 +220,7 @@ class StripePaymentCompletionTest extends TestCase
             'client_reference_id' => $order->order_number,
             'metadata' => ['order_number' => $order->order_number],
             'payment_status' => 'paid',
+            'livemode' => false,
             'amount_total' => 1900,
             'currency' => 'usd',
             'invoice' => [

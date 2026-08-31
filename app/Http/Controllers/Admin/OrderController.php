@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\Commerce\ExternalInvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -41,21 +42,24 @@ class OrderController extends Controller
         return view('admin.orders.index', compact('orders'));
     }
 
-    public function show(Order $order): View
+    public function show(Order $order, ExternalInvoiceService $invoices): View
     {
         $order = $this->safeOrderQuery()
             ->with([
                 'user:id,full_name,email,role,status,created_at',
                 'items' => fn ($query) => $query
-                    ->select(['id', 'order_id', 'product_id', 'product_name', 'quantity', 'unit_price', 'line_total', 'created_at'])
+                    ->select(['id', 'order_id', 'product_id', 'product_name', 'quantity', 'unit_price', 'line_total', 'metadata', 'created_at'])
                     ->with('product:id,name,slug,type,status'),
                 'payments' => fn ($query) => $query
                     ->select($this->safePaymentColumns())
                     ->latest(),
+                'externalInvoices',
             ])
             ->findOrFail($order->getKey());
 
-        return view('admin.orders.show', compact('order'));
+        $invoice = $invoices->customerFacingInvoiceFor($order);
+
+        return view('admin.orders.show', compact('order', 'invoice'));
     }
 
     private function safeOrderQuery()
@@ -72,7 +76,7 @@ class OrderController extends Controller
     {
         return [
             'id', 'order_id', 'provider', 'provider_transaction_id',
-            'amount', 'currency', 'status', 'paid_at', 'failure_reason',
+            'payment_environment', 'amount', 'currency', 'status', 'paid_at', 'failure_reason',
             'created_at', 'updated_at',
         ];
     }

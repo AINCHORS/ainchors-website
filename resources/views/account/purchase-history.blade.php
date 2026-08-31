@@ -56,7 +56,12 @@
                                 <td class="whitespace-nowrap px-5 py-4">{{ $order->currency }} {{ number_format((float) $order->total_amount, 2) }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $payment ? ucfirst(str_replace('_', ' ', $payment->status)) : '—' }}</td>
-                                <td class="whitespace-nowrap px-5 py-4">{{ $payment ? ucfirst($payment->provider) : '—' }}</td>
+                                <td class="px-5 py-4">
+                                    <span class="whitespace-nowrap">{{ $payment ? ucfirst($payment->provider) : '—' }}</span>
+                                    @if ($payment?->provider_transaction_id)
+                                        <span class="mt-1 block max-w-52 break-all text-xs text-ainchors-grey-light">Reference: {{ $payment->provider_transaction_id }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-5 py-4">
                                     <div class="flex flex-wrap gap-2">
                                         @foreach ($order->items as $item)
@@ -67,6 +72,12 @@
                                                 </a>
                                             @endif
                                         @endforeach
+
+                                        @if ($order->status === 'completed' && $order->items->contains(fn ($item) => data_get($item->metadata, 'product_type') === 'course_package'))
+                                            <a href="{{ route('my-courses') }}" class="rounded-ainchors-button bg-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-white transition hover:bg-ainchors-green-dark">
+                                                My Courses
+                                            </a>
+                                        @endif
 
                                         @if ($invoice)
                                             <a href="{{ route('purchase-history.invoice', $invoice) }}" class="rounded-ainchors-button border border-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">

@@ -31,10 +31,14 @@ class StripeGateway
 
         try {
             $response = $this->client()
-                ->withHeaders(['Idempotency-Key' => $order->idempotency_key.'-stripe'])
+                ->withHeaders([
+                    'Idempotency-Key' => $order->idempotency_key.'-stripe',
+                    'Stripe-Version' => '2026-07-29.dahlia',
+                ])
                 ->asForm()
                 ->post($this->apiUrl('/v1/checkout/sessions'), [
                     'mode' => 'payment',
+                    'integration_identifier' => $this->integrationIdentifier($order),
                     'client_reference_id' => $order->order_number,
                     'customer_email' => $order->user->email,
                     'success_url' => $successUrl,
@@ -154,5 +158,17 @@ class StripeGateway
         $factor = in_array(strtoupper($currency), $zeroDecimalCurrencies, true) ? 1 : 100;
 
         return (int) round((float) $amount * $factor);
+    }
+
+    private function integrationIdentifier(Order $order): string
+    {
+        $hash = hash('sha256', $order->order_number);
+        $suffix = '';
+
+        for ($index = 0; $index < 8; $index++) {
+            $suffix .= chr(97 + (hexdec($hash[$index]) % 26));
+        }
+
+        return 'ainchors_checkout_'.$suffix;
     }
 }

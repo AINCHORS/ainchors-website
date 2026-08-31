@@ -21,7 +21,7 @@ class OrderService
                     'unit_price', 'line_total', 'metadata', 'created_at',
                 ]),
                 'payments' => fn ($query) => $query->select([
-                    'id', 'order_id', 'provider', 'amount', 'currency',
+                    'id', 'order_id', 'provider', 'provider_transaction_id', 'payment_environment', 'amount', 'currency',
                     'status', 'paid_at', 'created_at',
                 ])->latest('id'),
                 'externalInvoices' => fn ($query) => $query->select([
