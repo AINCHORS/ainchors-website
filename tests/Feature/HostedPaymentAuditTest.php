@@ -258,6 +258,39 @@ class HostedPaymentAuditTest extends TestCase
         $this->assertSame(1, ExternalInvoice::query()->count());
     }
 
+    public function test_provider_invoice_reference_cannot_be_reassigned_between_orders(): void
+    {
+        config(['commerce.invoices.provider_hosts.stripe' => ['invoice.stripe.com']]);
+
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+        $firstProduct = $this->oneTimeProduct('service', 'INVOICE-OWNER-A', 'Invoice Owner A', 20);
+        $secondProduct = $this->oneTimeProduct('service', 'INVOICE-OWNER-B', 'Invoice Owner B', 20);
+
+        [$firstOrder] = app(\App\Services\Commerce\OrderService::class)
+            ->createForProduct($firstUser, $firstProduct, 'invoice-owner-a');
+        [$secondOrder] = app(\App\Services\Commerce\OrderService::class)
+            ->createForProduct($secondUser, $secondProduct, 'invoice-owner-b');
+        $firstOrder->update(['status' => 'completed']);
+        $secondOrder->update(['status' => 'completed']);
+
+        $service = app(ExternalInvoiceService::class);
+        $service->record(
+            $firstOrder,
+            'stripe',
+            'in_shared_provider_reference',
+            'https://invoice.stripe.com/i/first-order',
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->record(
+            $secondOrder,
+            'stripe',
+            'in_shared_provider_reference',
+            'https://invoice.stripe.com/i/second-order',
+        );
+    }
+
     public function test_paypal_rejects_wrong_order_capture_amount_currency_status_and_capture_id(): void
     {
         $this->enablePayPal();
