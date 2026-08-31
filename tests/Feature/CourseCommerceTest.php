@@ -21,7 +21,10 @@ class CourseCommerceTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
-        config(['commerce.payment.driver' => 'demo']);
+        config([
+            'commerce.payment.driver' => 'demo',
+            'commerce.payment.environment' => 'sandbox',
+        ]);
         Storage::fake('local');
         $this->artisan('ainchors:populate-legacy-course-catalogue')->assertExitCode(0);
         $this->artisan('ainchors:populate-course-learning-content')->assertExitCode(0);
