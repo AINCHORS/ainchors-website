@@ -192,7 +192,7 @@ class HostedPaymentAuditTest extends TestCase
 
     public function test_admin_and_user_reference_one_trusted_invoice_record(): void
     {
-        config(['commerce.invoices.trusted_hosts' => ['invoice.stripe.com']]);
+        config(['commerce.invoices.provider_hosts.stripe' => ['invoice.stripe.com']]);
         $admin = User::factory()->create(['role' => 'admin']);
         $user = User::factory()->create();
         $product = $this->oneTimeProduct('service', 'AUDIT-INVOICE-SERVICE', 'Invoice Audit Service', 99);
