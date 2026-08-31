@@ -27,7 +27,7 @@ class ExternalInvoiceService
         if (! preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/', $provider)
             || $externalReference === ''
             || ! in_array($status, ['issued', 'void'], true)
-            || ! $this->isTrustedUrl($invoiceUrl)) {
+            || ! $this->isTrustedProviderUrl($provider, $invoiceUrl)) {
             throw new InvalidArgumentException('The external invoice data is not valid or trusted.');
         }
 
@@ -48,7 +48,24 @@ class ExternalInvoiceService
         return $order->externalInvoices
             ->where('status', 'issued')
             ->sortByDesc('issued_at')
-            ->first(fn (ExternalInvoice $invoice): bool => $this->isTrustedUrl($invoice->getRawOriginal('invoice_url')));
+            ->first(fn (ExternalInvoice $invoice): bool => $this->isTrustedProviderUrl(
+                $invoice->provider,
+                (string) $invoice->getRawOriginal('invoice_url'),
+            ));
+    }
+
+    public function providerInvoiceFor(Order $order, string $provider): ?ExternalInvoice
+    {
+        $provider = strtolower(trim($provider));
+
+        return $order->externalInvoices
+            ->where('provider', $provider)
+            ->where('status', 'issued')
+            ->sortByDesc('issued_at')
+            ->first(fn (ExternalInvoice $invoice): bool => $this->isTrustedProviderUrl(
+                $provider,
+                (string) $invoice->getRawOriginal('invoice_url'),
+            ));
     }
 
     public function customerUrl(ExternalInvoice $invoice): ?string
@@ -59,18 +76,20 @@ class ExternalInvoiceService
 
         $url = (string) $invoice->getRawOriginal('invoice_url');
 
-        return $this->isTrustedUrl($url) ? $url : null;
+        return $this->isTrustedProviderUrl($invoice->provider, $url) ? $url : null;
     }
 
-    public function isTrustedUrl(string $url): bool
+    public function isTrustedProviderUrl(string $provider, string $url): bool
     {
         $parts = parse_url($url);
         $host = strtolower((string) ($parts['host'] ?? ''));
-        $trustedHosts = config('commerce.invoices.trusted_hosts', []);
+        $provider = strtolower(trim($provider));
+        $trustedHosts = config('commerce.invoices.provider_hosts.'.$provider, []);
 
         return ($parts['scheme'] ?? null) === 'https'
             && $host !== ''
             && ! isset($parts['user'], $parts['pass'])
+            && is_array($trustedHosts)
             && in_array($host, $trustedHosts, true);
     }
 }
