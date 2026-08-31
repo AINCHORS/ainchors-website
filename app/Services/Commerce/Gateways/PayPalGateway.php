@@ -12,7 +12,10 @@ class PayPalGateway
 {
     public function configured(): bool
     {
-        return filled(config('commerce.payment.paypal.client_id'))
+        $environment = (string) config('commerce.payment.environment');
+
+        return in_array($environment, ['sandbox', 'live'], true)
+            && filled(config('commerce.payment.paypal.client_id'))
             && filled(config('commerce.payment.paypal.client_secret'))
             && filled(config('commerce.payment.paypal.webhook_id'));
     }
@@ -141,9 +144,14 @@ class PayPalGateway
 
     private function apiUrl(string $path): string
     {
-        $environment = config('commerce.payment.environment') === 'live' ? 'live_url' : 'sandbox_url';
+        $environment = (string) config('commerce.payment.environment');
+        if (! in_array($environment, ['sandbox', 'live'], true)) {
+            throw new RuntimeException('PAYMENT_ENVIRONMENT must be either sandbox or live.');
+        }
 
-        return rtrim((string) config('commerce.payment.paypal.'.$environment), '/').$path;
+        $baseUrl = $environment === 'live' ? 'live_url' : 'sandbox_url';
+
+        return rtrim((string) config('commerce.payment.paypal.'.$baseUrl), '/').$path;
     }
 
     private function formattedAmount(string|float $amount, string $currency): string
