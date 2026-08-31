@@ -161,6 +161,16 @@ class HostedPaymentAuditTest extends TestCase
         config(['commerce.payment.stripe.secret' => implode('_', ['sk', 'test', 'audit', 'fixture'])]);
         $this->assertFalse(app(StripeGateway::class)->configured());
 
+        config([
+            'commerce.payment.environment' => 'production',
+            'commerce.payment.stripe.secret' => implode('_', ['sk', 'live', 'audit', 'fixture']),
+            'commerce.payment.paypal.client_id' => 'paypal-invalid-env-client',
+            'commerce.payment.paypal.client_secret' => 'paypal-invalid-env-secret',
+            'commerce.payment.paypal.webhook_id' => 'paypal-invalid-env-webhook',
+        ]);
+        $this->assertFalse(app(StripeGateway::class)->configured());
+        $this->assertFalse(app(PayPalGateway::class)->configured());
+
         $this->enableStripe();
         Http::fake(function (ClientRequest $request) {
             if ($request->method() === 'POST') {
