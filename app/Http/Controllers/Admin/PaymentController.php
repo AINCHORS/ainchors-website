@@ -44,7 +44,7 @@ class PaymentController extends Controller
             ->findOrFail($payment->getKey());
 
         $invoice = $payment->order
-            ? $invoices->customerFacingInvoiceFor($payment->order)
+            ? $invoices->providerInvoiceFor($payment->order, $payment->provider)
             : null;
 
         return view('admin.payments.show', compact('payment', 'invoice'));
