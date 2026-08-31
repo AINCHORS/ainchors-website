@@ -41,7 +41,7 @@
                     </thead>
                     <tbody class="divide-y divide-ainchors-grey-light/20">
                         @foreach ($orders as $order)
-                            @php($payment = $order->payments->first())
+                            @php($payment = $order->payments->firstWhere('status', 'paid') ?? $order->payments->first())
                             @php($invoice = $customerInvoices->get($order->id))
                             <tr class="align-top text-ainchors-grey-dark">
                                 <td class="whitespace-nowrap px-5 py-4 font-semibold text-ainchors-navy">{{ $order->order_number }}</td>
