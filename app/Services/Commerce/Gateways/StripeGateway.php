@@ -14,14 +14,13 @@ class StripeGateway
     {
         $secret = (string) config('commerce.payment.stripe.secret');
 
-        $environment = match (config('commerce.payment.environment')) {
-            'sandbox' => 'test',
-            'live' => 'live',
-            default => null,
-        };
+        $environment = (string) config('commerce.payment.environment');
 
-        return ($environment === 'test' && (str_starts_with($secret, 'rk_test_') || str_starts_with($secret, 'sk_test_')))
-            || ($environment === 'live' && (str_starts_with($secret, 'rk_live_') || str_starts_with($secret, 'sk_live_')));
+        return match ($environment) {
+            'sandbox' => str_starts_with($secret, 'rk_test_') || str_starts_with($secret, 'sk_test_'),
+            'live' => str_starts_with($secret, 'rk_live_') || str_starts_with($secret, 'sk_live_'),
+            default => false,
+        };
     }
 
     /** @return array<string, mixed> */

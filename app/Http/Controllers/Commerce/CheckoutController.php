@@ -44,7 +44,7 @@ class CheckoutController extends Controller
         $token = $token !== '' ? $token : (string) Str::uuid();
         $request->session()->put($key, $token);
 
-        $paymentDriver = (string) config('commerce.payment.driver', 'demo');
+        $paymentDriver = $this->paymentDriver();
         $availableProviders = $paymentDriver === 'hosted'
             ? $this->hostedPayments->availableProviders()
             : [];
@@ -56,7 +56,7 @@ class CheckoutController extends Controller
     {
         $this->assertPurchasable($request, $product);
 
-        $paymentDriver = (string) config('commerce.payment.driver', 'demo');
+        $paymentDriver = $this->paymentDriver();
         if ($paymentDriver === 'hosted') {
             return $this->startHostedCheckout($request, $product);
         }
@@ -136,6 +136,18 @@ class CheckoutController extends Controller
         }
 
         return redirect()->away($hosted['redirect_url']);
+    }
+
+    private function paymentDriver(): string
+    {
+        $driver = (string) config('commerce.payment.driver', 'demo');
+        $environment = (string) config('commerce.payment.environment', 'sandbox');
+
+        abort_unless(in_array($driver, ['demo', 'hosted'], true), 503, 'Payment configuration is invalid.');
+        abort_unless(in_array($environment, ['sandbox', 'live'], true), 503, 'Payment environment is invalid.');
+        abort_if($driver === 'demo' && $environment !== 'sandbox', 503, 'Demo checkout is not available in the live payment environment.');
+
+        return $driver;
     }
 
     private function assertPurchasable(Request $request, Product $product): void

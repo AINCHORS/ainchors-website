@@ -43,6 +43,11 @@ class CheckoutService
 
     public function purchase(User $user, Product $product, string $idempotencyKey): Order
     {
+        if (config('commerce.payment.driver') !== 'demo'
+            || config('commerce.payment.environment') !== 'sandbox') {
+            throw new RuntimeException('Demo checkout is not enabled for the current payment configuration.');
+        }
+
         $order = $this->prepareOrder($user, $product, $idempotencyKey);
 
         if ($order->status === 'completed') {

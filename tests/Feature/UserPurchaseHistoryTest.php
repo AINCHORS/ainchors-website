@@ -94,7 +94,7 @@ class UserPurchaseHistoryTest extends TestCase
 
     public function test_provider_neutral_invoice_link_is_server_validated_and_user_scoped(): void
     {
-        config(['commerce.invoices.trusted_hosts' => ['billing.example.test']]);
+        config(['commerce.invoices.provider_hosts.stripe' => ['billing.example.test']]);
 
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -137,7 +137,7 @@ class UserPurchaseHistoryTest extends TestCase
 
     public function test_tampered_or_void_external_invoice_is_not_exposed(): void
     {
-        config(['commerce.invoices.trusted_hosts' => ['billing.example.test']]);
+        config(['commerce.invoices.provider_hosts.stripe' => ['billing.example.test']]);
 
         $user = User::factory()->create();
         $course = $this->course('tampered-invoice-course', 'Tampered Invoice Course');

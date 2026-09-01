@@ -138,7 +138,9 @@ class HostedPaymentAuditTest extends TestCase
         Http::assertSent(fn (ClientRequest $request): bool => str_ends_with($request->url(), '/v2/checkout/orders')
             && $request->method() === 'POST'
             && ! array_key_exists('invoice_id', $request->data())
+            && data_get($request->data(), 'purchase_units.0.invoice_id') === null
             && filled(data_get($request->data(), 'purchase_units.0.reference_id'))
+            && filled(data_get($request->data(), 'purchase_units.0.custom_id'))
             && data_get($request->data(), 'intent') === 'CAPTURE'
             && filled(data_get($request->data(), 'payment_source.paypal.experience_context.return_url'))
             && filled(data_get($request->data(), 'payment_source.paypal.experience_context.cancel_url')));
@@ -165,7 +167,13 @@ class HostedPaymentAuditTest extends TestCase
         config(['commerce.payment.stripe.secret' => implode('_', ['sk', 'test', 'audit', 'fixture'])]);
         $this->assertFalse(app(StripeGateway::class)->configured());
 
-        config(['commerce.payment.environment' => 'production']);
+        config([
+            'commerce.payment.environment' => 'production',
+            'commerce.payment.stripe.secret' => implode('_', ['sk', 'live', 'audit', 'fixture']),
+            'commerce.payment.paypal.client_id' => 'paypal-invalid-env-client',
+            'commerce.payment.paypal.client_secret' => 'paypal-invalid-env-secret',
+            'commerce.payment.paypal.webhook_id' => 'paypal-invalid-env-webhook',
+        ]);
         $this->assertFalse(app(StripeGateway::class)->configured());
         $this->assertFalse(app(PayPalGateway::class)->configured());
         $this->assertSame([], app(\App\Services\Commerce\HostedPaymentService::class)->availableProviders());
@@ -207,7 +215,10 @@ class HostedPaymentAuditTest extends TestCase
 
     public function test_admin_and_user_reference_only_the_matching_provider_invoice(): void
     {
-        config(['commerce.invoices.trusted_hosts' => ['invoice.stripe.com', 'www.sandbox.paypal.com']]);
+        config([
+            'commerce.invoices.provider_hosts.stripe' => ['invoice.stripe.com'],
+            'commerce.invoices.provider_hosts.paypal' => ['www.sandbox.paypal.com'],
+        ]);
         $admin = User::factory()->create(['role' => 'admin']);
         $user = User::factory()->create();
         $product = $this->oneTimeProduct('service', 'AUDIT-INVOICE-SERVICE', 'Invoice Audit Service', 99);
@@ -278,6 +289,39 @@ class HostedPaymentAuditTest extends TestCase
         $this->actingAs($admin)->get(route('admin.invoices.show', $payPalInvoice))
             ->assertRedirect('https://www.sandbox.paypal.com/invoice/p/#INV2-PAYPAL-AUDIT-1002');
         $this->assertSame(2, ExternalInvoice::query()->count());
+    }
+
+    public function test_provider_invoice_reference_cannot_be_reassigned_between_orders(): void
+    {
+        config(['commerce.invoices.provider_hosts.stripe' => ['invoice.stripe.com']]);
+
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+        $firstProduct = $this->oneTimeProduct('service', 'INVOICE-OWNER-A', 'Invoice Owner A', 20);
+        $secondProduct = $this->oneTimeProduct('service', 'INVOICE-OWNER-B', 'Invoice Owner B', 20);
+
+        [$firstOrder] = app(\App\Services\Commerce\OrderService::class)
+            ->createForProduct($firstUser, $firstProduct, 'invoice-owner-a');
+        [$secondOrder] = app(\App\Services\Commerce\OrderService::class)
+            ->createForProduct($secondUser, $secondProduct, 'invoice-owner-b');
+        $firstOrder->update(['status' => 'completed']);
+        $secondOrder->update(['status' => 'completed']);
+
+        $service = app(ExternalInvoiceService::class);
+        $service->record(
+            $firstOrder,
+            'stripe',
+            'in_shared_provider_reference',
+            'https://invoice.stripe.com/i/first-order',
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->record(
+            $secondOrder,
+            'stripe',
+            'in_shared_provider_reference',
+            'https://invoice.stripe.com/i/second-order',
+        );
     }
 
     public function test_paypal_rejects_wrong_order_capture_amount_currency_status_and_capture_id(): void
@@ -378,6 +422,44 @@ class HostedPaymentAuditTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('payments', 0);
         $this->assertDatabaseCount('enrollments', 0);
+    }
+
+    public function test_invalid_payment_configuration_and_live_demo_checkout_fail_closed(): void
+    {
+        $user = User::factory()->create();
+        $course = Product::query()->where('sku', 'SL-AI-001')->firstOrFail();
+
+        config([
+            'commerce.payment.driver' => 'hostd',
+            'commerce.payment.environment' => 'sandbox',
+        ]);
+        $this->actingAs($user)->get(route('checkout.show', $course))->assertStatus(503);
+
+        config([
+            'commerce.payment.driver' => 'demo',
+            'commerce.payment.environment' => 'live',
+        ]);
+        $this->actingAs($user)->get(route('checkout.show', $course))->assertStatus(503);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('enrollments', 0);
+    }
+
+    public function test_demo_service_cannot_complete_an_order_outside_sandbox(): void
+    {
+        config([
+            'commerce.payment.driver' => 'demo',
+            'commerce.payment.environment' => 'live',
+        ]);
+
+        $user = User::factory()->create();
+        $course = Product::query()->where('sku', 'SL-AI-001')->firstOrFail();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Demo checkout is not enabled');
+        app(\App\Services\Commerce\CheckoutService::class)
+            ->purchase($user, $course, 'live-demo-must-fail');
     }
 
     public function test_live_ready_configuration_uses_live_labels_and_paypal_api_without_a_live_charge(): void

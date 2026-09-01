@@ -41,8 +41,10 @@
                     </thead>
                     <tbody class="divide-y divide-ainchors-grey-light/20">
                         @foreach ($orders as $order)
-                            @php($payment = $order->payments->first())
+                            @php($payment = $order->payments->firstWhere('status', 'paid') ?? $order->payments->first())
                             @php($invoice = $customerInvoices->get($order->id))
+                            @php($isCompletedPackage = $order->status === 'completed' && $order->items->contains(fn ($item) => data_get($item->metadata, 'product_type') === 'course_package'))
+                            @php($hasCourseAction = $order->items->contains(fn ($item) => $activeEnrollments->has($item->product_id)))
                             <tr class="align-top text-ainchors-grey-dark">
                                 <td class="whitespace-nowrap px-5 py-4 font-semibold text-ainchors-navy">{{ $order->order_number }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $order->placed_at?->format('j M Y') ?? $order->created_at?->format('j M Y') ?? '—' }}</td>
@@ -73,7 +75,7 @@
                                             @endif
                                         @endforeach
 
-                                        @if ($order->status === 'completed' && $order->items->contains(fn ($item) => data_get($item->metadata, 'product_type') === 'course_package'))
+                                        @if ($isCompletedPackage)
                                             <a href="{{ route('my-courses') }}" class="rounded-ainchors-button bg-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-white transition hover:bg-ainchors-green-dark">
                                                 My Courses
                                             </a>
@@ -85,7 +87,7 @@
                                             </a>
                                         @endif
 
-                                        @if (! $invoice && $order->items->every(fn ($item) => ! $activeEnrollments->has($item->product_id)))
+                                        @if (! $invoice && ! $hasCourseAction && ! $isCompletedPackage)
                                             <span class="py-2 text-xs text-ainchors-grey-light">No action available</span>
                                         @endif
                                     </div>

@@ -45,7 +45,7 @@ class StripePaymentCompletionTest extends TestCase
             'commerce.payment.enabled_providers' => ['stripe'],
             'commerce.payment.stripe.secret' => implode('_', ['sk', 'test', 'phase', 'two', 'fixture']),
             'commerce.payment.stripe.webhook_secret' => $this->webhookSecret,
-            'commerce.invoices.trusted_hosts' => ['invoice.stripe.com'],
+            'commerce.invoices.provider_hosts.stripe' => ['invoice.stripe.com'],
         ]);
     }
 

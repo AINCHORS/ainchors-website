@@ -124,7 +124,17 @@ Register these public HTTPS webhook URLs in the matching provider environment:
   `PAYMENT.CAPTURE.COMPLETED`.
 
 For production, create separate live credentials and webhook endpoints, then
-set `PAYMENT_ENVIRONMENT=live`. Prefer a least-privilege Stripe restricted key.
+set `PAYMENT_ENVIRONMENT=live`. The only accepted payment-environment values
+are `sandbox` and `live`; invalid values fail closed. Demo checkout is never
+allowed while the payment environment is `live`. Prefer a least-privilege
+Stripe restricted key.
+
+Stripe invoice links are stored only when Stripe itself returns a provider-hosted
+invoice/receipt URL. PayPal Orders v2 payments keep the verified PayPal capture
+reference but do not create an AINCHORS invoice and do not call the PayPal
+Invoicing API after checkout. AINCHORS must not generate or host a substitute
+invoice/receipt for either provider.
+
 Never put secret keys in Blade, JavaScript, Git, screenshots, logs, or support
 messages. After changing environment values, clear Laravel's cached config with
 `php artisan optimize:clear`.

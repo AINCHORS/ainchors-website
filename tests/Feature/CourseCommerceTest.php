@@ -21,7 +21,10 @@ class CourseCommerceTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
-        config(['commerce.payment.driver' => 'demo']);
+        config([
+            'commerce.payment.driver' => 'demo',
+            'commerce.payment.environment' => 'sandbox',
+        ]);
         Storage::fake('local');
         $this->artisan('ainchors:populate-legacy-course-catalogue')->assertExitCode(0);
         $this->artisan('ainchors:populate-course-learning-content')->assertExitCode(0);
@@ -280,6 +283,10 @@ class CourseCommerceTest extends TestCase
         ]);
         $this->assertDatabaseCount('external_invoices', 0);
         $this->assertDatabaseCount('enrollments', 10);
+        $this->actingAs($user)->get(route('purchase-history'))
+            ->assertOk()
+            ->assertSee('My Courses')
+            ->assertDontSee('No action available');
     }
 
     public function test_paypal_checkout_has_no_processing_routes_and_cancel_returns_to_unsuccessful_page(): void

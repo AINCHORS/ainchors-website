@@ -39,12 +39,18 @@ return [
     ],
 
     'invoices' => [
-        // Provider-hosted invoice/receipt URLs are never rendered directly.
-        // Each server-side provider integration must explicitly allow its HTTPS host.
-        'trusted_hosts' => array_values(array_filter(array_map(
-            static fn (string $host): string => strtolower(trim($host)),
-            explode(',', (string) env('INVOICE_TRUSTED_HOSTS', 'invoice.stripe.com,www.sandbox.paypal.com,www.paypal.com')),
-        ))),
+        // Only provider-hosted financial documents are allowed. AINCHORS does
+        // not generate or host its own invoices/receipts in this checkout flow.
+        'provider_hosts' => [
+            'stripe' => array_values(array_filter(array_map(
+                static fn (string $host): string => strtolower(trim($host)),
+                explode(',', (string) env('STRIPE_INVOICE_HOSTS', 'invoice.stripe.com,pay.stripe.com')),
+            ))),
+            'paypal' => array_values(array_filter(array_map(
+                static fn (string $host): string => strtolower(trim($host)),
+                explode(',', (string) env('PAYPAL_INVOICE_HOSTS', 'www.sandbox.paypal.com,www.paypal.com')),
+            ))),
+        ],
     ],
 
     'payment_email' => [
