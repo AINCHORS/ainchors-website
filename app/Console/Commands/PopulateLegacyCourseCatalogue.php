@@ -73,7 +73,7 @@ class PopulateLegacyCourseCatalogue extends Command
     {
         return [
             [
-                'sku' => 'SL-AI-001', 'type' => 'course', 'name' => 'AI Prompt Engineering 101',
+                'sku' => 'SL-AI-001', 'type' => 'course', 'course_category' => 'self_training', 'name' => 'AI Prompt Engineering 101',
                 'slug' => 'ai-prompt-engineering-101',
                 'short_description' => 'Master machine learning, natural language processing, and generative AI to build intelligent systems',
                 'description' => 'Master machine learning, natural language processing, and generative AI to build intelligent systems',
@@ -89,7 +89,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ),
             ],
             [
-                'sku' => 'SL-DMAI-002', 'type' => 'course', 'name' => 'Digital Marketing using AI',
+                'sku' => 'SL-DMAI-002', 'type' => 'course', 'course_category' => 'self_training', 'name' => 'Digital Marketing using AI',
                 'slug' => 'digital-marketing-using-ai',
                 'short_description' => 'Leverage AI-powered tools for personalized campaigns, automation, and customer engagement optimization',
                 'description' => 'Leverage AI-powered tools for personalized campaigns, automation, and customer engagement optimization',
@@ -103,7 +103,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ),
             ],
             [
-                'sku' => 'SL-DA-003', 'type' => 'course', 'name' => 'Data Analytics', 'slug' => 'data-analytics',
+                'sku' => 'SL-DA-003', 'type' => 'course', 'course_category' => 'data_analysis', 'name' => 'Data Analytics', 'slug' => 'data-analytics',
                 'short_description' => 'Transform raw data into strategic insights through visualization, statistical analysis, and business intelligence',
                 'description' => 'Transform raw data into strategic insights through visualization, statistical analysis, and business intelligence',
                 'image' => 'assets/site/699c338c590acb9104afa2f5.png', 'price' => 19, 'currency' => 'USD',
@@ -116,7 +116,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ),
             ],
             [
-                'sku' => 'SL-SQL-004', 'type' => 'course', 'name' => 'SQL for Data Analytics', 'slug' => 'sql-for-data-analytics',
+                'sku' => 'SL-SQL-004', 'type' => 'course', 'course_category' => 'data_analysis', 'name' => 'SQL for Data Analytics', 'slug' => 'sql-for-data-analytics',
                 'short_description' => 'Learn to query databases, extract insights, and analyze data using structured query language',
                 'description' => 'Learn to query databases, extract insights, and analyze data using structured query language',
                 'image' => 'assets/site/6971830d7079aada0632836d.webp', 'price' => 19, 'currency' => 'USD',
@@ -129,7 +129,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ),
             ],
             [
-                'sku' => 'SL-FLM-005', 'type' => 'course', 'name' => 'Financial Literacy Mastery', 'slug' => 'financial-literacy-mastery',
+                'sku' => 'SL-FLM-005', 'type' => 'course', 'course_category' => 'digital_money_mastery', 'name' => 'Financial Literacy Mastery', 'slug' => 'financial-literacy-mastery',
                 'short_description' => 'Build wealth through budgeting, investing, credit management, and smart financial decision-making',
                 'description' => 'Build wealth through budgeting, investing, credit management, and smart financial decision-making',
                 'image' => 'assets/site/700f1cbb-ae75-42c0-bbb7-d4c22a98074d.png', 'price' => 19, 'currency' => 'USD',
@@ -142,7 +142,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ),
             ],
             [
-                'sku' => 'SL-EP-006', 'type' => 'course', 'name' => 'E-Payment Fundamentals', 'slug' => 'e-payment-fundamentals',
+                'sku' => 'SL-EP-006', 'type' => 'course', 'course_category' => 'digital_money_mastery', 'name' => 'E-Payment Fundamentals', 'slug' => 'e-payment-fundamentals',
                 'short_description' => 'Understand digital wallets, payment gateways, transaction security, and the cashless economy',
                 'description' => 'Understand digital wallets, payment gateways, transaction security, and the cashless economy',
                 'image' => 'assets/site/699c536a1001a5ff39d32f70.jpg', 'price' => 19, 'currency' => 'USD',
@@ -155,7 +155,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ),
             ],
             [
-                'sku' => 'SL-FF-007', 'type' => 'course', 'name' => 'Fintech Fundamentals', 'slug' => 'fintech-fundamentals',
+                'sku' => 'SL-FF-007', 'type' => 'course', 'course_category' => 'digital_money_mastery', 'name' => 'Fintech Fundamentals', 'slug' => 'fintech-fundamentals',
                 'short_description' => 'Explore digital banking, lending platforms, robo-advisors, and the future of financial services',
                 'description' => 'Explore digital banking, lending platforms, robo-advisors, and the future of financial services',
                 'image' => 'assets/site/d11891b9-544e-4896-85c5-e8140dd77653.png', 'price' => 19, 'currency' => 'USD',
@@ -173,7 +173,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ]]]),
             ],
             [
-                'sku' => 'SL-CBDC-008', 'type' => 'course', 'name' => 'Central Bank Digital Currency (CBDC)',
+                'sku' => 'SL-CBDC-008', 'type' => 'course', 'course_category' => 'digital_money_mastery', 'name' => 'Central Bank Digital Currency (CBDC)',
                 'slug' => 'central-bank-digital-currency-cbdc',
                 'short_description' => 'Discover how government-backed digital currencies are reshaping global monetary systems',
                 'description' => 'Discover how government-backed digital currencies are reshaping global monetary systems',
@@ -187,7 +187,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 ), ['checkout_verification' => 'No recoverable product amount metadata was found in /cbdccheckoutpage. USD 19 is sourced from the individual landing page display.']),
             ],
             [
-                'sku' => 'SL-BSA-009', 'type' => 'course', 'name' => "Becoming Your Supervisor's Advisor",
+                'sku' => 'SL-BSA-009', 'type' => 'course', 'course_category' => 'career_advancement', 'name' => "Becoming Your Supervisor's Advisor",
                 'slug' => 'becoming-your-supervisors-advisor',
                 'short_description' => 'Position yourself as a trusted strategic partner and advance your influence within the organization',
                 'description' => 'Position yourself as a trusted strategic partner and advance your influence within the organization',
@@ -196,7 +196,7 @@ class PopulateLegacyCourseCatalogue extends Command
                 'metadata' => $this->careerMetadata("Becoming Your Supervisor's Advisor", 'Becoming Your Supervisor\'s Advisor course', '/product-details/product/6a55cb02824b1a2d6648bbf1'),
             ],
             [
-                'sku' => 'SL-IDK-010', 'type' => 'course', 'name' => 'Influencing with Data & KPIs',
+                'sku' => 'SL-IDK-010', 'type' => 'course', 'course_category' => 'career_advancement', 'name' => 'Influencing with Data & KPIs',
                 'slug' => 'influencing-with-data-and-kpis',
                 'short_description' => 'Master data storytelling and persuasive analytics to drive business decisions and gain stakeholder buy-in',
                 'description' => 'Master data storytelling and persuasive analytics to drive business decisions and gain stakeholder buy-in',

@@ -30,11 +30,11 @@
                 <a class="secondary-button" href="{{ route('purchase-history') }}">Purchase History</a>
             @endif
             @if ($invoice)
-                <a class="secondary-button" href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer">View Invoice</a>
+                <a class="secondary-button" href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer">View Provider Invoice</a>
             @endif
         </div>
         @if (! $invoice && $payment?->provider === 'stripe')
-            <p class="invoice-pending-note">The Stripe invoice is being prepared and will appear in Purchase History when available.</p>
+            <p class="invoice-pending-note">The Stripe provider invoice is being prepared and will appear in Purchase History when available.</p>
         @elseif (! $invoice)
             <p class="invoice-pending-note">The verified payment and order reference are available in Purchase History.</p>
         @endif

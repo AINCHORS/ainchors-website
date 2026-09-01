@@ -301,7 +301,7 @@ class AdminPlatformTest extends TestCase
             ->get(route('admin.products.index', ['course_category' => 'self_training']))
             ->assertOk()
             ->assertSee('Categorised Course')
-            ->assertSee('Self Training Courses');
+            ->assertSee('Artificial Intelligence Courses');
 
         $this->actingAs($admin)
             ->put(route('admin.products.update', $course), $this->productPayload([
@@ -603,8 +603,9 @@ class AdminPlatformTest extends TestCase
             ->assertOk()
             ->assertSee('Search courses')
             ->assertSee('Course category')
-            ->assertSee('Self Training Courses')
-            ->assertSee('Digital Money Mastery');
+            ->assertSee('Artificial Intelligence Courses')
+            ->assertSee('Data Analysis Courses')
+            ->assertSee('Digital Financial Mastery');
 
         $this->actingAs($admin)
             ->get(route('admin.course-content.index', ['q' => 'Prompt', 'course_category' => 'self_training']))

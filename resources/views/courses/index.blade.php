@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Self-Learning Courses | AINCHORS')
+@section('title', 'Training Courses | AINCHORS')
 
 @section('content')
 <section class="catalogue-hero">
     <div class="site-shell narrow-shell">
         <span class="eyebrow">Learn at your pace</span>
         <h1>Training Course</h1>
-        <p>Explore the ten AINCHORS video courses and access your learning from one secure account.</p>
+        <p>Explore AINCHORS video courses and access your learning from one secure account.</p>
     </div>
 </section>
 

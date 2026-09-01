@@ -214,7 +214,7 @@ class CourseCommerceTest extends TestCase
                     'id' => 'PAYPAL-ORDER-PACKAGE',
                     'status' => 'CREATED',
                     'links' => [[
-                        'rel' => 'approve',
+                        'rel' => 'payer-action',
                         'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-PACKAGE',
                     ]],
                 ], 201);
@@ -228,6 +228,7 @@ class CourseCommerceTest extends TestCase
                 'purchase_units' => [[
                     'reference_id' => $order->order_number,
                     'custom_id' => $order->order_number,
+                    'amount' => ['value' => '150.00', 'currency_code' => 'USD'],
                     'payments' => ['captures' => [[
                         'id' => 'PAYPAL-CAPTURE-PACKAGE',
                         'status' => 'COMPLETED',
@@ -252,6 +253,15 @@ class CourseCommerceTest extends TestCase
             'payment_provider' => 'paypal',
         ])->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-PACKAGE');
 
+        $this->actingAs($user)->post(route('checkout.store', $package), [
+            'checkout_token' => $token,
+            'payment_provider' => 'paypal',
+        ])->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-PACKAGE');
+        $this->assertSame(1, collect(Http::recorded())->filter(
+            fn (array $record): bool => $record[0]->method() === 'POST'
+                && str_ends_with($record[0]->url(), '/v2/checkout/orders'),
+        )->count());
+
         $order = Order::query()->firstOrFail();
         $this->assertSame('awaiting_payment', $order->status);
         $this->assertDatabaseCount('enrollments', 0);
@@ -268,7 +278,51 @@ class CourseCommerceTest extends TestCase
             'provider_transaction_id' => 'PAYPAL-CAPTURE-PACKAGE',
             'status' => 'paid',
         ]);
+        $this->assertDatabaseCount('external_invoices', 0);
         $this->assertDatabaseCount('enrollments', 10);
+    }
+
+    public function test_paypal_checkout_has_no_processing_routes_and_cancel_returns_to_unsuccessful_page(): void
+    {
+        $this->enablePayPalHostedCheckout();
+        Http::fake(function (ClientRequest $request) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'paypal-access-token'], 200);
+            }
+
+            return Http::response([
+                'id' => 'PAYPAL-ORDER-CANCEL',
+                'status' => 'CREATED',
+                'links' => [[
+                    'rel' => 'payer-action',
+                    'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-CANCEL',
+                ]],
+            ], 201);
+        });
+
+        $user = User::factory()->create();
+        $course = $this->course();
+        $token = $this->checkoutToken($user, $course);
+
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('payments.paypal.processing'));
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('payments.paypal.status'));
+
+        $this->actingAs($user)->post(route('checkout.store', $course), [
+            'checkout_token' => $token,
+            'payment_provider' => 'paypal',
+        ])->assertRedirect('https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-CANCEL');
+
+        $order = Order::query()->firstOrFail();
+        $this->actingAs($user)
+            ->get(route('payments.cancel', ['provider' => 'paypal', 'order' => $order]).'?token=PAYPAL-ORDER-CANCEL')
+            ->assertRedirect(route('checkout.failed', $order));
+        $this->actingAs($user)->get(route('checkout.failed', $order))
+            ->assertOk()
+            ->assertSee('Payment Unsuccessful');
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'cancelled']);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'provider' => 'paypal', 'status' => 'failed']);
+        $this->assertDatabaseCount('enrollments', 0);
     }
 
     public function test_stripe_hosted_service_payment_completes_order_without_creating_course_access(): void
@@ -338,14 +392,34 @@ class CourseCommerceTest extends TestCase
                 return Http::response(['verification_status' => 'SUCCESS'], 200);
             }
 
+            if (str_ends_with($request->url(), '/v2/checkout/orders')) {
+                return Http::response([
+                    'id' => 'PAYPAL-ORDER-WEBHOOK',
+                    'status' => 'CREATED',
+                    'links' => [[
+                        'rel' => 'approve',
+                        'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-WEBHOOK',
+                    ]],
+                ], 201);
+            }
+
+            $order = Order::query()->firstOrFail();
+
             return Http::response([
                 'id' => 'PAYPAL-ORDER-WEBHOOK',
-                'status' => 'CREATED',
-                'links' => [[
-                    'rel' => 'approve',
-                    'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=PAYPAL-ORDER-WEBHOOK',
+                'status' => 'COMPLETED',
+                'purchase_units' => [[
+                    'reference_id' => $order->order_number,
+                    'custom_id' => $order->order_number,
+                    'amount' => ['value' => '150.00', 'currency_code' => 'USD'],
+                    'payments' => ['captures' => [[
+                        'id' => 'PAYPAL-CAPTURE-WEBHOOK',
+                        'status' => 'COMPLETED',
+                        'amount' => ['value' => '150.00', 'currency_code' => 'USD'],
+                        'supplementary_data' => ['related_ids' => ['order_id' => 'PAYPAL-ORDER-WEBHOOK']],
+                    ]]],
                 ]],
-            ], 201);
+            ], 200);
         });
 
         $user = User::factory()->create();
@@ -390,6 +464,7 @@ class CourseCommerceTest extends TestCase
             'status' => 'paid',
         ]);
         $this->assertDatabaseCount('enrollments', 10);
+        $this->assertDatabaseCount('external_invoices', 0);
     }
 
     public function test_draft_inactive_incomplete_and_monthly_courses_cannot_checkout(): void
@@ -811,6 +886,51 @@ class CourseCommerceTest extends TestCase
             'commerce.payment.paypal.client_secret' => 'paypal-client-secret-fixture',
             'commerce.payment.paypal.webhook_id' => 'paypal-webhook-id-fixture',
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function paypalInvoicePayload(
+        Order $order,
+        string $invoiceId,
+        string $invoiceNumber,
+        string $status,
+        string $paymentId,
+    ): array {
+        $amount = number_format((float) $order->total_amount, 2, '.', '');
+        $invoice = [
+            'id' => $invoiceId,
+            'status' => $status,
+            'detail' => [
+                'invoice_number' => $invoiceNumber,
+                'reference' => $order->order_number,
+                'currency_code' => $order->currency,
+                'metadata' => [
+                    'recipient_view_url' => 'https://www.sandbox.paypal.com/invoice/p/#'.$invoiceId,
+                ],
+            ],
+            'primary_recipients' => [[
+                'billing_info' => ['email_address' => $order->user()->value('email')],
+            ]],
+            'amount' => ['value' => $amount, 'currency_code' => $order->currency],
+            'due_amount' => [
+                'value' => $status === 'PAID' ? '0.00' : $amount,
+                'currency_code' => $order->currency,
+            ],
+        ];
+
+        if ($status === 'PAID') {
+            $invoice['payments'] = [
+                'paid_amount' => ['value' => $amount, 'currency_code' => $order->currency],
+                'transactions' => [[
+                    'type' => 'PAYPAL',
+                    'payment_id' => $paymentId,
+                    'method' => 'PAYPAL',
+                    'amount' => ['value' => $amount, 'currency_code' => $order->currency],
+                ]],
+            ];
+        }
+
+        return $invoice;
     }
 
     /** @return array<string, string> */

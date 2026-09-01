@@ -3,7 +3,6 @@
 namespace App\Services\Commerce\Gateways;
 
 use App\Models\Order;
-use App\Models\Payment;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -15,9 +14,11 @@ class StripeGateway
     {
         $secret = (string) config('commerce.payment.stripe.secret');
 
-        $environment = Payment::inferEnvironment('stripe', null, [
-            'environment' => config('commerce.payment.environment'),
-        ]);
+        $environment = match (config('commerce.payment.environment')) {
+            'sandbox' => 'test',
+            'live' => 'live',
+            default => null,
+        };
 
         return ($environment === 'test' && (str_starts_with($secret, 'rk_test_') || str_starts_with($secret, 'sk_test_')))
             || ($environment === 'live' && (str_starts_with($secret, 'rk_live_') || str_starts_with($secret, 'sk_live_')));

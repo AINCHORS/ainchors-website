@@ -39,11 +39,16 @@ return [
     ],
 
     'invoices' => [
-        // External invoice/receipt URLs are never rendered directly. A future
-        // server-side provider integration must explicitly allow its HTTPS host.
+        // Provider-hosted invoice/receipt URLs are never rendered directly.
+        // Each server-side provider integration must explicitly allow its HTTPS host.
         'trusted_hosts' => array_values(array_filter(array_map(
             static fn (string $host): string => strtolower(trim($host)),
-            explode(',', (string) env('INVOICE_TRUSTED_HOSTS', 'invoice.stripe.com')),
+            explode(',', (string) env('INVOICE_TRUSTED_HOSTS', 'invoice.stripe.com,www.sandbox.paypal.com,www.paypal.com')),
         ))),
+    ],
+
+    'payment_email' => [
+        'from_address' => env('PAYMENT_EMAIL_FROM_ADDRESS', 'info@ainchors.com'),
+        'from_name' => env('PAYMENT_EMAIL_FROM_NAME', 'AINCHORS Training & Consulting'),
     ],
 ];

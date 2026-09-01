@@ -40,10 +40,10 @@ class Payment extends Model
         }
 
         $declared = strtolower((string) ($providerData['environment'] ?? ''));
-        if (in_array($declared, ['live', 'production'], true)) {
+        if ($declared === 'live') {
             return 'live';
         }
-        if (in_array($declared, ['test', 'sandbox'], true)) {
+        if ($declared === 'sandbox') {
             return 'test';
         }
 

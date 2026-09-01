@@ -112,6 +112,7 @@ class HostedPaymentAuditTest extends TestCase
                 'purchase_units' => [[
                     'reference_id' => $order->order_number,
                     'custom_id' => $order->order_number,
+                    'amount' => ['value' => number_format((float) $order->total_amount, 2, '.', ''), 'currency_code' => $order->currency],
                     'payments' => ['captures' => [[
                         'id' => 'CAPTURE-AUDIT-'.$order->id,
                         'status' => 'COMPLETED',
@@ -133,9 +134,18 @@ class HostedPaymentAuditTest extends TestCase
         }
 
         $this->assertSame(3, Payment::query()->where('provider', 'paypal')->where('status', 'paid')->count());
+        $this->assertSame(0, ExternalInvoice::query()->where('provider', 'paypal')->count());
+        Http::assertSent(fn (ClientRequest $request): bool => str_ends_with($request->url(), '/v2/checkout/orders')
+            && $request->method() === 'POST'
+            && ! array_key_exists('invoice_id', $request->data())
+            && filled(data_get($request->data(), 'purchase_units.0.reference_id'))
+            && data_get($request->data(), 'intent') === 'CAPTURE'
+            && filled(data_get($request->data(), 'payment_source.paypal.experience_context.return_url'))
+            && filled(data_get($request->data(), 'payment_source.paypal.experience_context.cancel_url')));
         Http::assertSent(fn (ClientRequest $request): bool => str_ends_with($request->url(), '/capture')
             && $request->method() === 'POST'
             && $request->body() === '{}');
+        Http::assertNotSent(fn (ClientRequest $request): bool => str_contains($request->url(), '/v2/invoicing'));
     }
 
     public function test_environment_configuration_and_provider_evidence_must_agree(): void
@@ -154,6 +164,11 @@ class HostedPaymentAuditTest extends TestCase
 
         config(['commerce.payment.stripe.secret' => implode('_', ['sk', 'test', 'audit', 'fixture'])]);
         $this->assertFalse(app(StripeGateway::class)->configured());
+
+        config(['commerce.payment.environment' => 'production']);
+        $this->assertFalse(app(StripeGateway::class)->configured());
+        $this->assertFalse(app(PayPalGateway::class)->configured());
+        $this->assertSame([], app(\App\Services\Commerce\HostedPaymentService::class)->availableProviders());
 
         $this->enableStripe();
         Http::fake(function (ClientRequest $request) {
@@ -190,9 +205,9 @@ class HostedPaymentAuditTest extends TestCase
         $this->assertDatabaseCount('enrollments', 0);
     }
 
-    public function test_admin_and_user_reference_one_trusted_invoice_record(): void
+    public function test_admin_and_user_reference_only_the_matching_provider_invoice(): void
     {
-        config(['commerce.invoices.trusted_hosts' => ['invoice.stripe.com']]);
+        config(['commerce.invoices.trusted_hosts' => ['invoice.stripe.com', 'www.sandbox.paypal.com']]);
         $admin = User::factory()->create(['role' => 'admin']);
         $user = User::factory()->create();
         $product = $this->oneTimeProduct('service', 'AUDIT-INVOICE-SERVICE', 'Invoice Audit Service', 99);
@@ -221,10 +236,48 @@ class HostedPaymentAuditTest extends TestCase
         $this->actingAs($admin)->get(route('admin.orders.show', $order))->assertOk()
             ->assertSee('AUDIT-1001')->assertSee(route('admin.invoices.show', $invoice), false);
         $this->actingAs($admin)->get(route('admin.payments.show', $payment))->assertOk()
-            ->assertSee('AUDIT-1001')->assertSee('Test')->assertSee(route('admin.invoices.show', $invoice), false);
+            ->assertSee('AUDIT-1001')->assertSee('Test')->assertSee('Provider Invoice / Receipt')
+            ->assertSee('View Provider Invoice')->assertSee(route('admin.invoices.show', $invoice), false);
+
+        $payPalPayment = $order->payments()->create([
+            'provider' => 'paypal',
+            'payment_environment' => 'test',
+            'provider_transaction_id' => 'PAYPAL-CAPTURE-NO-INVOICE',
+            'amount' => 99,
+            'currency' => 'USD',
+            'status' => 'paid',
+            'paid_at' => now()->addSecond(),
+            'provider_data' => ['environment' => 'sandbox', 'paypal_invoice_id' => 'INV2-PAYPAL-NO-INVOICE'],
+        ]);
+        $this->actingAs($admin)->get(route('admin.payments.show', $payPalPayment))->assertOk()
+            ->assertSee('PAYPAL-CAPTURE-NO-INVOICE')
+            ->assertSee('Provider Invoice / Receipt')
+            ->assertSee('Not available')
+            ->assertDontSee('AUDIT-1001')
+            ->assertDontSee(route('admin.invoices.show', $invoice), false);
+
+        $payPalInvoice = app(ExternalInvoiceService::class)->record(
+            $order,
+            'paypal',
+            'INV2-PAYPAL-AUDIT-1002',
+            'https://www.sandbox.paypal.com/invoice/p/#INV2-PAYPAL-AUDIT-1002',
+            'PP-AUDIT-1002',
+        );
+        $this->actingAs($user)->get(route('purchase-history'))->assertOk()
+            ->assertSee(route('purchase-history.invoice', $payPalInvoice), false)
+            ->assertDontSee(route('purchase-history.invoice', $invoice), false);
+        $this->actingAs($admin)->get(route('admin.payments.show', $payPalPayment))->assertOk()
+            ->assertSee('PP-AUDIT-1002')
+            ->assertSee(route('admin.invoices.show', $payPalInvoice), false)
+            ->assertDontSee(route('admin.invoices.show', $invoice), false);
+        $this->actingAs($admin)->get(route('admin.orders.show', $order))->assertOk()
+            ->assertSee('PP-AUDIT-1002')
+            ->assertSee(route('admin.invoices.show', $payPalInvoice), false);
         $this->actingAs($admin)->get(route('admin.invoices.show', $invoice))
             ->assertRedirect('https://invoice.stripe.com/i/audit-admin-user');
-        $this->assertSame(1, ExternalInvoice::query()->count());
+        $this->actingAs($admin)->get(route('admin.invoices.show', $payPalInvoice))
+            ->assertRedirect('https://www.sandbox.paypal.com/invoice/p/#INV2-PAYPAL-AUDIT-1002');
+        $this->assertSame(2, ExternalInvoice::query()->count());
     }
 
     public function test_paypal_rejects_wrong_order_capture_amount_currency_status_and_capture_id(): void
@@ -253,17 +306,19 @@ class HostedPaymentAuditTest extends TestCase
             $relatedOrder = $scenario === 'SECURITY-WRONG-ORDER' ? 'PAYPAL-OTHER-ORDER' : $providerOrder;
             $amount = $scenario === 'SECURITY-WRONG-AMOUNT' ? '1.00' : number_format((float) $order->total_amount, 2, '.', '');
             $currency = $scenario === 'SECURITY-WRONG-CURRENCY' ? 'AUD' : $order->currency;
-            $status = $scenario === 'SECURITY-WRONG-STATUS' ? 'APPROVED' : 'COMPLETED';
+            $orderStatus = $scenario === 'SECURITY-WRONG-ORDER-STATUS' ? 'APPROVED' : 'COMPLETED';
+            $captureStatus = $scenario === 'SECURITY-WRONG-CAPTURE-STATUS' ? 'PENDING' : 'COMPLETED';
 
             return Http::response([
                 'id' => $providerOrder,
-                'status' => $status,
+                'status' => $orderStatus,
                 'purchase_units' => [[
                     'reference_id' => $order->order_number,
                     'custom_id' => $order->order_number,
+                    'amount' => ['value' => number_format((float) $order->total_amount, 2, '.', ''), 'currency_code' => $order->currency],
                     'payments' => ['captures' => [[
                         'id' => $captureId,
-                        'status' => 'COMPLETED',
+                        'status' => $captureStatus,
                         'amount' => ['value' => $amount, 'currency_code' => $currency],
                         'supplementary_data' => ['related_ids' => ['order_id' => $relatedOrder]],
                     ]]],
@@ -271,7 +326,7 @@ class HostedPaymentAuditTest extends TestCase
             ], 201);
         });
 
-        foreach (['WRONG-AMOUNT', 'WRONG-CURRENCY', 'WRONG-ORDER', 'WRONG-STATUS', 'BLANK-CAPTURE'] as $scenario) {
+        foreach (['WRONG-AMOUNT', 'WRONG-CURRENCY', 'WRONG-ORDER', 'WRONG-ORDER-STATUS', 'WRONG-CAPTURE-STATUS', 'BLANK-CAPTURE'] as $scenario) {
             $product = $this->oneTimeProduct('service', 'SECURITY-'.$scenario, 'Security '.$scenario, 25);
             $user = User::factory()->create();
             $token = $this->checkoutToken($user, $product);
@@ -290,6 +345,7 @@ class HostedPaymentAuditTest extends TestCase
 
         $this->assertDatabaseCount('enrollments', 0);
         $this->assertSame(0, Payment::query()->where('status', 'paid')->count());
+        $this->assertDatabaseCount('external_invoices', 0);
     }
 
     public function test_invalid_stripe_signature_and_failed_paypal_verification_are_rejected(): void

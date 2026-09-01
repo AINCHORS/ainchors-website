@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Models\Order;
+use App\Mail\ProviderInvoiceAvailable;
 use App\Models\ExternalInvoice;
-use App\Models\Payment;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -50,6 +51,7 @@ class StripePaymentCompletionTest extends TestCase
 
     public function test_verified_return_completes_payment_order_and_one_active_enrollment_and_refresh_is_safe(): void
     {
+        Mail::fake();
         $sessionId = 'cs_test_verified_return';
         Http::fake(function (ClientRequest $request) use ($sessionId) {
             if ($request->method() === 'POST') {
@@ -93,9 +95,22 @@ class StripePaymentCompletionTest extends TestCase
             'status' => 'issued',
         ]);
         $invoice = ExternalInvoice::query()->firstOrFail();
+        $this->assertNotNull($invoice->email_sent_at);
+        Mail::assertSent(ProviderInvoiceAvailable::class, 1);
+        Mail::assertSent(ProviderInvoiceAvailable::class, function (ProviderInvoiceAvailable $mail) use ($user, $order): bool {
+            $rendered = $mail->render();
+
+            return $mail->hasTo($user->email)
+                && $mail->hasFrom('info@ainchors.com', 'AINCHORS Training & Consulting')
+                && str_contains($rendered, 'Payment Confirmed')
+                && str_contains($rendered, 'Thank you for choosing AINCHORS Training &amp; Consulting')
+                && str_contains($rendered, $order->order_number)
+                && str_contains($rendered, 'Transaction Reference')
+                && str_contains($rendered, 'View Stripe Invoice / Receipt');
+        });
         $this->actingAs($user)->get(route('checkout.success', $order))
             ->assertOk()
-            ->assertSee('View Invoice')
+            ->assertSee('View Provider Invoice')
             ->assertSee(route('purchase-history.invoice', $invoice), false);
         $this->actingAs($user)->get(route('purchase-history.invoice', $invoice))
             ->assertRedirect('https://invoice.stripe.com/i/'.$sessionId);
@@ -105,6 +120,7 @@ class StripePaymentCompletionTest extends TestCase
 
     public function test_verified_webhook_and_return_share_one_idempotent_completion_path(): void
     {
+        Mail::fake();
         $sessionId = 'cs_test_webhook_then_return';
         Http::fake(function (ClientRequest $request) use ($sessionId) {
             if ($request->method() === 'POST') {
@@ -135,6 +151,48 @@ class StripePaymentCompletionTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'completed']);
         $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'status' => 'paid']);
         $this->assertDatabaseHas('enrollments', ['user_id' => $user->id, 'product_id' => $course->id, 'status' => 'active']);
+        Mail::assertSent(ProviderInvoiceAvailable::class, 1);
+    }
+
+    public function test_success_page_recovers_a_stripe_provider_invoice_that_was_not_ready_at_return_time(): void
+    {
+        Mail::fake();
+        $sessionId = 'cs_test_delayed_invoice';
+        $invoiceReady = false;
+        Http::fake(function (ClientRequest $request) use ($sessionId, &$invoiceReady) {
+            if ($request->method() === 'POST') {
+                return Http::response(['id' => $sessionId, 'url' => 'https://checkout.stripe.test/delayed-invoice']);
+            }
+
+            $session = $this->paidSession(Order::query()->firstOrFail(), $sessionId);
+            if (! $invoiceReady) {
+                unset($session['invoice']);
+            }
+
+            return Http::response($session);
+        });
+
+        $user = User::factory()->create();
+        $order = $this->startCheckout($user, $this->course(), $sessionId);
+        $this->actingAs($user)
+            ->get(route('payments.stripe.return', $order).'?session_id='.$sessionId)
+            ->assertRedirect(route('checkout.success', $order));
+        $this->assertDatabaseCount('external_invoices', 0);
+        Mail::assertNothingSent();
+
+        $invoiceReady = true;
+        $this->actingAs($user)->get(route('checkout.success', $order))
+            ->assertOk()
+            ->assertSee('View Provider Invoice');
+
+        $this->assertDatabaseHas('external_invoices', [
+            'order_id' => $order->id,
+            'provider' => 'stripe',
+            'external_reference' => 'in_'.$sessionId,
+            'status' => 'issued',
+        ]);
+        $this->assertNotNull(ExternalInvoice::query()->firstOrFail()->email_sent_at);
+        Mail::assertSent(ProviderInvoiceAvailable::class, 1);
     }
 
     public function test_mismatched_amount_or_currency_cannot_complete_or_grant_access(): void

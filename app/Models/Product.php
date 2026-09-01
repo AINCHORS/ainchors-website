@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Product extends Model
 {
     public const COURSE_CATEGORIES = [
-        'self_training' => 'Self Training Courses',
-        'digital_money_mastery' => 'Digital Money Mastery',
+        'self_training' => 'Artificial Intelligence Courses',
+        'data_analysis' => 'Data Analysis Courses',
+        'digital_money_mastery' => 'Digital Financial Mastery',
         'career_advancement' => 'Career Advancement Courses',
     ];
 

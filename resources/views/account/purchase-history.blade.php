@@ -81,7 +81,7 @@
 
                                         @if ($invoice)
                                             <a href="{{ route('purchase-history.invoice', $invoice) }}" class="rounded-ainchors-button border border-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">
-                                                Invoice
+                                                View Provider Invoice
                                             </a>
                                         @endif
 

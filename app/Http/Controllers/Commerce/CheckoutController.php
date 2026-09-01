@@ -30,6 +30,9 @@ class CheckoutController extends Controller
     {
         $this->assertPurchasable($request, $product);
 
+        $key = 'checkout_tokens.'.$product->id;
+        $token = (string) $request->session()->get($key, '');
+
         if ($product->isCourse() && $this->access->canAccess($request->user(), $product)) {
             return redirect()->route('learn.show', $product);
         }
@@ -38,8 +41,7 @@ class CheckoutController extends Controller
             return redirect()->route('my-courses');
         }
 
-        $key = 'checkout_tokens.'.$product->id;
-        $token = $request->session()->get($key) ?? (string) Str::uuid();
+        $token = $token !== '' ? $token : (string) Str::uuid();
         $request->session()->put($key, $token);
 
         $paymentDriver = (string) config('commerce.payment.driver', 'demo');

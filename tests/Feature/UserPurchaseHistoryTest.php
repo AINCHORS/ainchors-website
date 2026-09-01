@@ -102,8 +102,8 @@ class UserPurchaseHistoryTest extends TestCase
         $order = $this->order($owner, $course, 'AIN-INVOICE-READY', 'completed', 'paid', 'Invoice Course Snapshot');
         $invoice = app(ExternalInvoiceService::class)->record(
             $order,
-            'xero',
-            'xero-invoice-fixture-1',
+            'stripe',
+            'stripe-invoice-fixture-1',
             'https://billing.example.test/customer/invoice-fixture-1',
             'INV-1001',
         );
@@ -111,8 +111,8 @@ class UserPurchaseHistoryTest extends TestCase
         $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'provider' => 'stripe']);
         $this->assertDatabaseHas('external_invoices', [
             'order_id' => $order->id,
-            'provider' => 'xero',
-            'external_reference' => 'xero-invoice-fixture-1',
+            'provider' => 'stripe',
+            'external_reference' => 'stripe-invoice-fixture-1',
             'invoice_number' => 'INV-1001',
             'status' => 'issued',
         ]);

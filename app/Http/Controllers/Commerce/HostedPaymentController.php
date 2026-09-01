@@ -42,11 +42,14 @@ class HostedPaymentController extends Controller
     public function paypalReturn(Request $request, Order $order): RedirectResponse
     {
         $this->assertOwned($request, $order);
-        $payPalOrderId = (string) $request->query('token');
-        abort_if($payPalOrderId === '', 400);
+        $paypalOrderId = (string) $request->query('token');
+        if ($paypalOrderId === '') {
+            return redirect()->route('checkout.failed', $order)
+                ->with('payment_failure_context', ['state' => 'failed', 'provider' => 'paypal']);
+        }
 
         try {
-            $order = $this->hostedPayments->completePayPalReturn($order, $payPalOrderId);
+            $order = $this->hostedPayments->completePayPalReturn($order, $paypalOrderId);
         } catch (RuntimeException $exception) {
             report($exception);
 

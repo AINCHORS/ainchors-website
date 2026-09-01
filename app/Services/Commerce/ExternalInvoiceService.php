@@ -45,7 +45,26 @@ class ExternalInvoiceService
 
     public function customerFacingInvoiceFor(Order $order): ?ExternalInvoice
     {
+        $payment = $order->payments
+            ->where('status', 'paid')
+            ->sortByDesc('paid_at')
+            ->first();
+
+        return $payment
+            ? $this->customerFacingInvoiceForProvider($order, $payment->provider)
+            : null;
+    }
+
+    public function customerFacingInvoiceForProvider(Order $order, string $provider): ?ExternalInvoice
+    {
+        $provider = strtolower(trim($provider));
+
+        if ($provider === '') {
+            return null;
+        }
+
         return $order->externalInvoices
+            ->where('provider', $provider)
             ->where('status', 'issued')
             ->sortByDesc('issued_at')
             ->first(fn (ExternalInvoice $invoice): bool => $this->isTrustedUrl($invoice->getRawOriginal('invoice_url')));

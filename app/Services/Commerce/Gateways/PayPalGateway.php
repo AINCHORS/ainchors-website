@@ -12,7 +12,8 @@ class PayPalGateway
 {
     public function configured(): bool
     {
-        return filled(config('commerce.payment.paypal.client_id'))
+        return in_array(config('commerce.payment.environment'), ['sandbox', 'live'], true)
+            && filled(config('commerce.payment.paypal.client_id'))
             && filled(config('commerce.payment.paypal.client_secret'))
             && filled(config('commerce.payment.paypal.webhook_id'));
     }
@@ -21,10 +22,11 @@ class PayPalGateway
     public function createOrder(Order $order): array
     {
         $item = $order->items->firstOrFail();
+
         try {
             $response = $this->client()
                 ->withHeaders([
-                    'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-create'),
+                    'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-order-create'),
                     'Prefer' => 'return=representation',
                 ])
                 ->post($this->apiUrl('/v2/checkout/orders'), [
@@ -32,54 +34,79 @@ class PayPalGateway
                     'purchase_units' => [[
                         'reference_id' => $order->order_number,
                         'custom_id' => $order->order_number,
-                        'invoice_id' => $order->order_number,
                         'description' => $item->product_name,
                         'amount' => [
                             'currency_code' => strtoupper($order->currency),
                             'value' => $this->formattedAmount($order->total_amount, $order->currency),
                         ],
                     ]],
-                    'application_context' => [
-                        'brand_name' => 'AINCHORS',
-                        'shipping_preference' => 'NO_SHIPPING',
-                        'user_action' => 'PAY_NOW',
-                        'return_url' => route('payments.paypal.return', $order),
-                        'cancel_url' => route('payments.cancel', ['order' => $order, 'provider' => 'paypal']),
+                    'payment_source' => [
+                        'paypal' => [
+                            'experience_context' => [
+                                'brand_name' => 'AINCHORS',
+                                'shipping_preference' => 'NO_SHIPPING',
+                                'user_action' => 'PAY_NOW',
+                                'return_url' => route('payments.paypal.return', $order),
+                                'cancel_url' => route('payments.cancel', ['provider' => 'paypal', 'order' => $order]),
+                            ],
+                        ],
                     ],
                 ]);
         } catch (Throwable $exception) {
             throw new RuntimeException('PayPal could not start the hosted checkout. Please try again.', previous: $exception);
         }
 
-        $data = $response->json();
-        $approval = collect(data_get($data, 'links', []))->firstWhere('rel', 'approve');
-        $approvalUrl = is_array($approval) ? ($approval['href'] ?? null) : null;
-        if (! $response->successful() || blank(data_get($data, 'id')) || blank($approvalUrl)) {
-            throw new RuntimeException('PayPal could not start the hosted checkout. Please try again.');
+        $paypalOrder = $response->json();
+        $orderId = (string) ($paypalOrder['id'] ?? '');
+        $approvalLink = collect($paypalOrder['links'] ?? [])
+            ->first(fn ($link): bool => is_array($link) && in_array(($link['rel'] ?? null), ['payer-action', 'approve'], true));
+        $approvalUrl = is_array($approvalLink) ? ($approvalLink['href'] ?? null) : null;
+
+        if (! $response->successful()
+            || $orderId === ''
+            || ! is_string($approvalUrl)
+            || ! $this->isTrustedApprovalUrl($approvalUrl)) {
+            throw new RuntimeException('PayPal did not provide a secure approval URL.');
         }
 
-        $data['approval_url'] = $approvalUrl;
+        $paypalOrder['approval_url'] = $approvalUrl;
 
-        return $data;
+        return $paypalOrder;
     }
 
     /** @return array<string, mixed> */
-    public function captureOrder(string $payPalOrderId, string $requestId): array
+    public function captureOrder(string $orderId, string $requestId): array
     {
         try {
             $response = $this->client()
                 ->withHeaders([
-                    'PayPal-Request-Id' => $this->requestId($requestId),
+                    'PayPal-Request-Id' => $this->requestId($requestId.'-capture'),
                     'Prefer' => 'return=representation',
                 ])
                 ->withBody('{}', 'application/json')
-                ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($payPalOrderId).'/capture'));
+                ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($orderId).'/capture'));
         } catch (Throwable $exception) {
-            throw new RuntimeException('PayPal could not verify and capture this payment.', previous: $exception);
+            throw new RuntimeException('PayPal could not capture this payment.', previous: $exception);
         }
 
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal could not verify and capture this payment.');
+            throw new RuntimeException('PayPal could not capture this payment.');
+        }
+
+        return $response->json();
+    }
+
+    /** @return array<string, mixed> */
+    public function retrieveOrder(string $orderId): array
+    {
+        try {
+            $response = $this->client()->get($this->apiUrl('/v2/checkout/orders/'.rawurlencode($orderId)));
+        } catch (Throwable $exception) {
+            throw new RuntimeException('PayPal could not verify this payment.', previous: $exception);
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('PayPal could not verify this payment.');
         }
 
         return $response->json();
@@ -142,7 +169,11 @@ class PayPalGateway
 
     private function apiUrl(string $path): string
     {
-        $environment = config('commerce.payment.environment') === 'live' ? 'live_url' : 'sandbox_url';
+        $environment = match (config('commerce.payment.environment')) {
+            'sandbox' => 'sandbox_url',
+            'live' => 'live_url',
+            default => throw new RuntimeException('PAYMENT_ENVIRONMENT must be either sandbox or live.'),
+        };
 
         return rtrim((string) config('commerce.payment.paypal.'.$environment), '/').$path;
     }
@@ -150,6 +181,18 @@ class PayPalGateway
     private function formattedAmount(string|float $amount, string $currency): string
     {
         return number_format((float) $amount, strtoupper($currency) === 'JPY' ? 0 : 2, '.', '');
+    }
+
+    private function isTrustedApprovalUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        $expectedHost = config('commerce.payment.environment') === 'live'
+            ? 'www.paypal.com'
+            : 'www.sandbox.paypal.com';
+
+        return ($parts['scheme'] ?? null) === 'https'
+            && strtolower((string) ($parts['host'] ?? '')) === $expectedHost
+            && ! isset($parts['user'], $parts['pass']);
     }
 
     private function requestId(string $value): string
