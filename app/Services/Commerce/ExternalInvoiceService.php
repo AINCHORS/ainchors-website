@@ -20,13 +20,16 @@ class ExternalInvoiceService
         $externalReference = trim($externalReference);
         $status = strtolower(trim((string) $status));
 
-        if ($order->status !== 'completed') {
+        $isPayPalPendingInvoice = $provider === 'paypal' && $status === 'unpaid' && $order->status === 'awaiting_payment';
+        $isCompletedProviderInvoice = $order->status === 'completed'
+            && (in_array($status, ['issued', 'void'], true) || ($provider === 'paypal' && $status === 'paid'));
+        if (! $isPayPalPendingInvoice && ! $isCompletedProviderInvoice) {
             throw new InvalidArgumentException('An external invoice can only be attached to a completed order.');
         }
 
         if (! preg_match('/^[a-z0-9][a-z0-9_-]{1,49}$/', $provider)
             || $externalReference === ''
-            || ! in_array($status, ['issued', 'void'], true)
+            || ! in_array($status, ['issued', 'paid', 'unpaid', 'void'], true)
             || ! $this->isTrustedProviderUrl($provider, $invoiceUrl)) {
             throw new InvalidArgumentException('The external invoice data is not valid or trusted.');
         }
@@ -72,9 +75,11 @@ class ExternalInvoiceService
             return null;
         }
 
+        $visibleStatus = $provider === 'paypal' ? 'paid' : 'issued';
+
         return $order->externalInvoices
             ->where('provider', $provider)
-            ->where('status', 'issued')
+            ->where('status', $visibleStatus)
             ->sortByDesc('issued_at')
             ->first(fn (ExternalInvoice $invoice): bool => $this->isTrustedProviderUrl(
                 $invoice->provider,
@@ -86,9 +91,11 @@ class ExternalInvoiceService
     {
         $provider = strtolower(trim($provider));
 
+        $visibleStatus = $provider === 'paypal' ? 'paid' : 'issued';
+
         return $order->externalInvoices
             ->where('provider', $provider)
-            ->where('status', 'issued')
+            ->where('status', $visibleStatus)
             ->sortByDesc('issued_at')
             ->first(fn (ExternalInvoice $invoice): bool => $this->isTrustedProviderUrl(
                 $provider,
@@ -98,13 +105,24 @@ class ExternalInvoiceService
 
     public function customerUrl(ExternalInvoice $invoice): ?string
     {
-        if ($invoice->status !== 'issued') {
+        if (! in_array($invoice->status, ['issued', 'paid'], true)) {
             return null;
         }
 
         $url = (string) $invoice->getRawOriginal('invoice_url');
 
         return $this->isTrustedProviderUrl($invoice->provider, $url) ? $url : null;
+    }
+
+    public function pendingPaymentUrl(ExternalInvoice $invoice): ?string
+    {
+        if ($invoice->provider !== 'paypal' || $invoice->status !== 'unpaid') {
+            return null;
+        }
+
+        $url = (string) $invoice->getRawOriginal('invoice_url');
+
+        return $this->isTrustedProviderUrl('paypal', $url) ? $url : null;
     }
 
     public function isTrustedProviderUrl(string $provider, string $url): bool

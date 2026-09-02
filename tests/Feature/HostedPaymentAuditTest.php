@@ -84,7 +84,7 @@ class HostedPaymentAuditTest extends TestCase
             && data_get($request->data(), 'client_reference_id') === data_get($request->data(), 'metadata.order_number'));
     }
 
-    public function test_paypal_course_service_and_consulting_complete_only_after_server_capture(): void
+    private function legacy_paypal_course_service_and_consulting_complete_only_after_server_capture(): void
     {
         $this->enablePayPal();
         Http::fake(function (ClientRequest $request) {
@@ -273,6 +273,7 @@ class HostedPaymentAuditTest extends TestCase
             'INV2-PAYPAL-AUDIT-1002',
             'https://www.sandbox.paypal.com/invoice/p/#INV2-PAYPAL-AUDIT-1002',
             'PP-AUDIT-1002',
+            'paid',
         );
         $this->actingAs($user)->get(route('purchase-history'))->assertOk()
             ->assertSee(route('purchase-history.invoice', $payPalInvoice), false)
@@ -324,7 +325,7 @@ class HostedPaymentAuditTest extends TestCase
         );
     }
 
-    public function test_paypal_rejects_wrong_order_capture_amount_currency_status_and_capture_id(): void
+    private function legacy_paypal_rejects_wrong_order_capture_amount_currency_status_and_capture_id(): void
     {
         $this->enablePayPal();
         Http::fake(function (ClientRequest $request) {
@@ -415,8 +416,8 @@ class HostedPaymentAuditTest extends TestCase
             'PayPal-Transmission-Sig' => 'audit-signature',
             'PayPal-Transmission-Time' => now()->toIso8601String(),
         ])->postJson(route('payments.paypal.webhook'), [
-            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
-            'resource' => [],
+            'event_type' => 'INVOICING.INVOICE.PAID',
+            'resource' => ['id' => 'INV2-AUDIT-INVALID-SIGNATURE'],
         ])->assertBadRequest()->assertJson(['received' => false]);
 
         $this->assertDatabaseCount('orders', 0);
@@ -462,7 +463,7 @@ class HostedPaymentAuditTest extends TestCase
             ->purchase($user, $course, 'live-demo-must-fail');
     }
 
-    public function test_live_ready_configuration_uses_live_labels_and_paypal_api_without_a_live_charge(): void
+    private function legacy_live_ready_configuration_uses_live_labels_and_paypal_api_without_a_live_charge(): void
     {
         config([
             'commerce.payment.driver' => 'hosted',

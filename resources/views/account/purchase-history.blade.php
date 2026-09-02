@@ -24,7 +24,7 @@
                 <x-button variant="primary" :href="route('courses.index')" class="mt-6">Browse Courses</x-button>
             </div>
         @else
-            <div class="overflow-x-auto rounded-ainchors-card border border-ainchors-grey-light/25 bg-ainchors-white shadow-lg shadow-ainchors-navy/5">
+            <div data-purchase-history-desktop class="hidden overflow-x-auto rounded-ainchors-card border border-ainchors-grey-light/25 bg-ainchors-white shadow-lg shadow-ainchors-navy/5 lg:block">
                 <table class="min-w-[1100px] w-full font-sans text-sm">
                     <caption class="sr-only">Purchase history for your AINCHORS account</caption>
                     <thead class="bg-ainchors-green-hero text-left text-ainchors-navy">
@@ -82,8 +82,8 @@
                                         @endif
 
                                         @if ($invoice)
-                                            <a href="{{ route('purchase-history.invoice', $invoice) }}" class="rounded-ainchors-button border border-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">
-                                                View Provider Invoice
+                                            <a href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer" class="rounded-ainchors-button border border-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">
+                                                View Receipt
                                             </a>
                                         @endif
 
@@ -96,6 +96,84 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+
+            <div data-purchase-history-cards data-course-carousel class="course-carousel lg:hidden" aria-label="Purchase history carousel">
+                <div class="course-carousel-viewport" data-carousel-viewport tabindex="0">
+                    <div class="course-carousel-track" data-carousel-track>
+                        @foreach ($orders as $order)
+                            @php($payment = $order->payments->firstWhere('status', 'paid') ?? $order->payments->first())
+                            @php($invoice = $customerInvoices->get($order->id))
+                            <div class="course-carousel-item" data-carousel-card>
+                    <article class="flex min-w-0 flex-col rounded-ainchors-card border border-ainchors-grey-light/25 bg-ainchors-white p-5 shadow-lg shadow-ainchors-navy/5">
+                        <div class="flex items-start justify-between gap-3 border-b border-ainchors-grey-light/20 pb-4">
+                            <div class="min-w-0">
+                                <p class="font-sans text-xs font-bold uppercase tracking-[0.12em] text-ainchors-green">Order</p>
+                                <h2 data-purchase-order-reference class="mt-1 min-h-[2.75rem] break-all font-heading text-base font-bold leading-snug text-ainchors-navy">{{ $order->order_number }}</h2>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-ainchors-green-hero px-3 py-1 font-sans text-xs font-semibold text-ainchors-navy">
+                                {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+                            </span>
+                        </div>
+
+                        <div class="flex-1 space-y-4 py-4 font-sans text-sm text-ainchors-grey-dark">
+                            <div data-purchase-product class="min-h-[4.5rem]">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-ainchors-grey-light">Product / Course / Package</p>
+                                <ul class="mt-1 space-y-1 font-semibold leading-snug text-ainchors-navy">
+                                    @foreach ($order->items as $item)
+                                        <li class="break-words">{{ $item->product_name }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+
+                            <dl class="grid grid-cols-2 gap-x-4 gap-y-3">
+                                <div>
+                                    <dt class="text-xs font-semibold text-ainchors-grey-light">Date</dt>
+                                    <dd class="mt-0.5">{{ $order->placed_at?->format('j M Y') ?? $order->created_at?->format('j M Y') ?? '—' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-ainchors-grey-light">Amount</dt>
+                                    <dd class="mt-0.5 font-bold text-ainchors-navy">{{ $order->currency }} {{ number_format((float) $order->total_amount, 2) }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-ainchors-grey-light">Payment status</dt>
+                                    <dd class="mt-0.5">{{ $payment ? ucfirst(str_replace('_', ' ', $payment->status)) : '—' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-xs font-semibold text-ainchors-grey-light">Payment method</dt>
+                                    <dd class="mt-0.5">{{ $payment ? ucfirst($payment->provider) : '—' }}</dd>
+                                </div>
+                            </dl>
+
+                            @if ($payment?->provider_transaction_id)
+                                <div>
+                                    <p class="text-xs font-semibold text-ainchors-grey-light">Transaction reference</p>
+                                    <p class="mt-1 break-all text-xs leading-relaxed">{{ $payment->provider_transaction_id }}</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="mt-auto flex flex-col gap-2 border-t border-ainchors-grey-light/20 pt-4">
+                            @if ($invoice)
+                                <a href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 items-center justify-center rounded-ainchors-button bg-ainchors-green px-4 py-2 text-center text-sm font-semibold text-ainchors-white transition hover:bg-ainchors-green-dark focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">
+                                    View Receipt
+                                </a>
+                            @else
+                                <span class="py-2 text-center text-xs text-ainchors-grey-light">No action available</span>
+                            @endif
+                        </div>
+                    </article>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="course-carousel-navigation" data-carousel-navigation hidden>
+                    <button type="button" class="course-carousel-arrow course-carousel-previous" data-carousel-previous aria-label="Previous purchases">←</button>
+                    <div class="course-carousel-pagination" data-carousel-pagination aria-label="Purchase history carousel pagination"></div>
+                    <button type="button" class="course-carousel-arrow course-carousel-next" data-carousel-next aria-label="Next purchases">→</button>
+                </div>
+                <p class="sr-only" data-carousel-status aria-live="polite"></p>
             </div>
         @endif
     </div>

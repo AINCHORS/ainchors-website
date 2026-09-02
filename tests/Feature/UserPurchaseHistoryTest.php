@@ -57,6 +57,16 @@ class UserPurchaseHistoryTest extends TestCase
         $response = $this->actingAs($user)->get(route('purchase-history'));
 
         $response->assertOk()
+            ->assertSee('data-purchase-history-desktop', false)
+            ->assertSee('data-purchase-history-cards', false)
+            ->assertSee('data-course-carousel', false)
+            ->assertSee('course-carousel-viewport', false)
+            ->assertSee('data-carousel-pagination', false)
+            ->assertSee('data-carousel-status', false)
+            ->assertSee('data-purchase-order-reference', false)
+            ->assertSee('data-purchase-product', false)
+            ->assertSee('min-h-[2.75rem]', false)
+            ->assertSee('min-h-[4.5rem]', false)
             ->assertSee($paidOrder->order_number)
             ->assertSee($awaitingOrder->order_number)
             ->assertSee($failedOrder->order_number)

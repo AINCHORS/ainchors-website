@@ -48,7 +48,7 @@ return [
             ))),
             'paypal' => array_values(array_filter(array_map(
                 static fn (string $host): string => strtolower(trim($host)),
-                explode(',', (string) env('PAYPAL_INVOICE_HOSTS', 'www.sandbox.paypal.com,www.paypal.com')),
+                explode(',', (string) env('PAYPAL_INVOICE_HOSTS', 'www.sandbox.paypal.com,sandbox.paypal.com,www.paypal.com,paypal.com')),
             ))),
         ],
     ],

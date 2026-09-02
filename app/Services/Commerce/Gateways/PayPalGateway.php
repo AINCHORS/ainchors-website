@@ -20,106 +20,103 @@ class PayPalGateway
             && filled(config('commerce.payment.paypal.webhook_id'));
     }
 
-    /** @return array<string, mixed> */
-    public function createOrder(Order $order): array
+    /** @return array{invoice_id: string} */
+    public function createInvoice(Order $order): array
     {
+        $order->loadMissing(['user', 'items']);
         $item = $order->items->firstOrFail();
 
         try {
             $response = $this->client()
                 ->withHeaders([
-                    'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-order-create'),
+                    'PayPal-Request-Id' => $this->requestId($order->idempotency_key.'-invoice-create'),
                     'Prefer' => 'return=representation',
                 ])
-                ->post($this->apiUrl('/v2/checkout/orders'), [
-                    'intent' => 'CAPTURE',
-                    'purchase_units' => [[
-                        'reference_id' => $order->order_number,
-                        'custom_id' => $order->order_number,
-                        'description' => $item->product_name,
-                        'amount' => [
-                            'currency_code' => strtoupper($order->currency),
-                            'value' => $this->formattedAmount($order->total_amount, $order->currency),
+                ->post($this->apiUrl('/v2/invoicing/invoices'), [
+                    'detail' => [
+                        'invoice_number' => $this->invoiceNumber($order->order_number),
+                        'reference' => $order->order_number,
+                        'currency_code' => strtoupper($order->currency),
+                        'note' => 'AINCHORS order '.$order->order_number,
+                    ],
+                    'primary_recipients' => [[
+                        'billing_info' => [
+                            'email_address' => (string) $order->user->email,
+                            'name' => ['full_name' => (string) ($order->user->full_name ?: $order->user->email)],
                         ],
                     ]],
-                    'payment_source' => [
-                        'paypal' => [
-                            'experience_context' => [
-                                'brand_name' => 'AINCHORS',
-                                'shipping_preference' => 'NO_SHIPPING',
-                                'user_action' => 'PAY_NOW',
-                                'return_url' => route('payments.paypal.return', $order),
-                                'cancel_url' => route('payments.cancel', ['provider' => 'paypal', 'order' => $order]),
-                            ],
+                    'items' => [[
+                        'name' => (string) $item->product_name,
+                        'quantity' => (string) $item->quantity,
+                        'unit_amount' => [
+                            'currency_code' => strtoupper($order->currency),
+                            'value' => $this->formattedAmount((string) $item->unit_price, $order->currency),
                         ],
-                    ],
+                    ]],
                 ]);
         } catch (Throwable $exception) {
-            throw new RuntimeException('PayPal could not start the hosted checkout. Please try again.', previous: $exception);
+            throw new RuntimeException('PayPal could not create the provider invoice. Please try again.', previous: $exception);
         }
 
-        $paypalOrder = $response->json();
-        $orderId = (string) ($paypalOrder['id'] ?? '');
-        $approvalLink = collect($paypalOrder['links'] ?? [])
-            ->first(fn ($link): bool => is_array($link) && in_array(($link['rel'] ?? null), ['payer-action', 'approve'], true));
-        $approvalUrl = is_array($approvalLink) ? ($approvalLink['href'] ?? null) : null;
-
-        if (! $response->successful()
-            || $orderId === ''
-            || ! is_string($approvalUrl)
-            || ! $this->isTrustedApprovalUrl($approvalUrl)) {
-            throw new RuntimeException('PayPal did not provide a secure approval URL.');
+        $payload = $response->json();
+        $links = is_array($payload) && ($payload['rel'] ?? null) === 'self'
+            ? [$payload]
+            : (array) data_get($payload, 'links', []);
+        $self = collect($links)->first(
+            fn ($link): bool => is_array($link) && ($link['rel'] ?? null) === 'self' && is_string($link['href'] ?? null),
+        );
+        $invoiceId = basename((string) ($self['href'] ?? ''));
+        if (! $response->successful() || ! str_starts_with($invoiceId, 'INV2-')) {
+            throw new RuntimeException('PayPal did not return a valid provider invoice reference.');
         }
 
-        $paypalOrder['approval_url'] = $approvalUrl;
-
-        return $paypalOrder;
+        return ['invoice_id' => $invoiceId];
     }
 
-    /** @return array<string, mixed> */
-    public function captureOrder(string $orderId, string $requestId): array
+    public function sendInvoice(string $invoiceId, string $requestId): void
     {
+        $this->assertInvoiceId($invoiceId);
         try {
             $response = $this->client()
-                ->withHeaders([
-                    'PayPal-Request-Id' => $this->requestId($requestId.'-capture'),
-                    'Prefer' => 'return=representation',
-                ])
-                ->withBody('{}', 'application/json')
-                ->post($this->apiUrl('/v2/checkout/orders/'.rawurlencode($orderId).'/capture'));
+                ->withHeaders(['PayPal-Request-Id' => $this->requestId($requestId.'-invoice-send')])
+                ->post($this->apiUrl('/v2/invoicing/invoices/'.rawurlencode($invoiceId).'/send'), [
+                    'send_to_invoicer' => false,
+                    'send_to_recipient' => false,
+                ]);
         } catch (Throwable $exception) {
-            throw new RuntimeException('PayPal could not capture this payment.', previous: $exception);
+            throw new RuntimeException('PayPal could not activate the provider invoice. Please try again.', previous: $exception);
         }
 
         if (! $response->successful()) {
-            throw new RuntimeException('PayPal could not capture this payment.');
+            throw new RuntimeException('PayPal could not activate the provider invoice. Please try again.');
         }
-
-        return $response->json();
     }
 
     /** @return array<string, mixed> */
-    public function retrieveOrder(string $orderId): array
+    public function retrieveInvoice(string $invoiceId): array
     {
+        $this->assertInvoiceId($invoiceId);
         try {
-            $response = $this->client()->get($this->apiUrl('/v2/checkout/orders/'.rawurlencode($orderId)));
+            $response = $this->client()->get($this->apiUrl('/v2/invoicing/invoices/'.rawurlencode($invoiceId)));
         } catch (Throwable $exception) {
-            throw new RuntimeException('PayPal could not verify this payment.', previous: $exception);
+            throw new RuntimeException('PayPal could not verify the provider invoice.', previous: $exception);
         }
 
-        if (! $response->successful()) {
-            throw new RuntimeException('PayPal could not verify this payment.');
+        $payload = $response->json();
+        if (! $response->successful() || ! is_array($payload)) {
+            throw new RuntimeException('PayPal could not verify the provider invoice.');
         }
 
-        return $response->json();
+        return $payload;
     }
 
     /** @param array<string, string|null> $headers */
     public function webhookIsVerified(array $headers, array $event): bool
     {
         $webhookId = (string) config('commerce.payment.paypal.webhook_id');
-        if ($webhookId === '') {
-            throw new RuntimeException('PayPal webhook verification is not configured.');
+        $required = ['paypal-auth-algo', 'paypal-cert-url', 'paypal-transmission-id', 'paypal-transmission-sig', 'paypal-transmission-time'];
+        if ($webhookId === '' || collect($required)->contains(fn (string $key): bool => blank($headers[$key] ?? null))) {
+            throw new RuntimeException('PayPal webhook verification is not configured or signed.');
         }
 
         try {
@@ -141,7 +138,7 @@ class PayPalGateway
 
     private function client(): PendingRequest
     {
-        return Http::acceptJson()->withToken($this->accessToken())->timeout(20)->retry(2, 200);
+        return Http::acceptJson()->withToken($this->accessToken())->connectTimeout(5)->timeout(15)->retry(2, 200);
     }
 
     private function accessToken(): string
@@ -155,7 +152,8 @@ class PayPalGateway
         try {
             $response = Http::asForm()
                 ->withBasicAuth($clientId, $secret)
-                ->timeout(20)
+                ->connectTimeout(5)
+                ->timeout(15)
                 ->post($this->apiUrl('/v1/oauth2/token'), ['grant_type' => 'client_credentials']);
         } catch (Throwable $exception) {
             throw new RuntimeException('PayPal authentication failed.', previous: $exception);
@@ -183,23 +181,38 @@ class PayPalGateway
 
     private function formattedAmount(string|float $amount, string $currency): string
     {
-        return number_format((float) $amount, strtoupper($currency) === 'JPY' ? 0 : 2, '.', '');
+        $value = (string) $amount;
+        $scale = strtoupper($currency) === 'JPY' ? 0 : 2;
+        if (! preg_match('/^\d+(?:\.\d+)?$/', $value)) {
+            throw new RuntimeException('The order amount is invalid.');
+        }
+        [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
+        if (strlen($fraction) > $scale && trim(substr($fraction, $scale), '0') !== '') {
+            throw new RuntimeException('The order amount has unsupported precision.');
+        }
+        $whole = ltrim($whole, '0') ?: '0';
+
+        return $scale === 0 ? $whole : $whole.'.'.str_pad(substr($fraction, 0, $scale), $scale, '0');
     }
 
-    private function isTrustedApprovalUrl(string $url): bool
+    private function assertInvoiceId(string $invoiceId): void
     {
-        $parts = parse_url($url);
-        $expectedHost = config('commerce.payment.environment') === 'live'
-            ? 'www.paypal.com'
-            : 'www.sandbox.paypal.com';
-
-        return ($parts['scheme'] ?? null) === 'https'
-            && strtolower((string) ($parts['host'] ?? '')) === $expectedHost
-            && ! isset($parts['user'], $parts['pass']);
+        if (! preg_match('/^INV2-[A-Z0-9-]+$/i', $invoiceId)) {
+            throw new RuntimeException('The PayPal invoice reference is invalid.');
+        }
     }
 
     private function requestId(string $value): string
     {
         return substr(hash('sha256', $value), 0, 32);
+    }
+
+    private function invoiceNumber(string $orderNumber): string
+    {
+        if (strlen($orderNumber) <= 25) {
+            return $orderNumber;
+        }
+
+        return substr($orderNumber, 0, 18).'-'.substr(hash('sha256', $orderNumber), 0, 6);
     }
 }

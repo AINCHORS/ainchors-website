@@ -98,8 +98,8 @@ private storage on a new machine because Git intentionally excludes them.
 
 Hosted checkout supports one-time `course`, `course_package`, `consulting`, and
 `service` products. The browser never supplies authoritative product, amount,
-currency, or access data. Stripe Checkout Sessions and PayPal Orders v2 are
-created on the server, and access/order completion occurs only after a verified
+currency, or access data. Stripe Checkout Sessions and PayPal Invoicing v2 invoices
+are created on the server, and access/order completion occurs only after a verified
 provider response. Demo and sandbox payments stay marked as test records and
 are excluded from live revenue totals.
 
@@ -121,7 +121,7 @@ Register these public HTTPS webhook URLs in the matching provider environment:
 - Stripe: `https://YOUR-DOMAIN/payments/stripe/webhook`, including
   `checkout.session.completed` and `checkout.session.async_payment_succeeded`.
 - PayPal: `https://YOUR-DOMAIN/payments/paypal/webhook`, including
-  `PAYMENT.CAPTURE.COMPLETED`.
+  `INVOICING.INVOICE.PAID`.
 
 For production, create separate live credentials and webhook endpoints, then
 set `PAYMENT_ENVIRONMENT=live`. The only accepted payment-environment values
@@ -130,10 +130,10 @@ allowed while the payment environment is `live`. Prefer a least-privilege
 Stripe restricted key.
 
 Stripe invoice links are stored only when Stripe itself returns a provider-hosted
-invoice/receipt URL. PayPal Orders v2 payments keep the verified PayPal capture
-reference but do not create an AINCHORS invoice and do not call the PayPal
-Invoicing API after checkout. AINCHORS must not generate or host a substitute
-invoice/receipt for either provider.
+invoice/receipt URL. PayPal checkout creates a genuine PayPal Invoicing v2 invoice,
+stores its validated recipient view URL, and completes only after a signed webhook
+and a fresh server-side invoice verification. AINCHORS does not generate or host a
+substitute invoice/receipt for either provider.
 
 Never put secret keys in Blade, JavaScript, Git, screenshots, logs, or support
 messages. After changing environment values, clear Laravel's cached config with

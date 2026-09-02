@@ -291,17 +291,22 @@ img { display: block; max-width: 100%; }
 .order-summary-card h3 { margin: 8px 0; color: #34485f; font-size: 18px; line-height: 1.5; }
 .order-summary-card .form-button { width: 100%; }
 
-.success-section { min-height: 680px; display: grid; place-items: center; padding: 80px 20px; background: radial-gradient(circle at 14% 12%,rgba(71,255,132,.25) 0%,rgba(71,255,132,0) 35%),radial-gradient(circle at 86% 86%,rgba(159,255,207,.34) 0%,rgba(159,255,207,0) 38%),linear-gradient(180deg,#fff 0%,#f4fff8 48%,#e9fff1 100%); }
-.success-card { width: min(100%, 650px); padding: 55px; text-align: center; border: 1px solid #dce8e3; border-radius: 22px; background: white; box-shadow: 0 24px 60px rgba(16,35,66,.12); }
+.success-section { min-height: 620px; display: grid; place-items: center; padding: 58px 20px; background: radial-gradient(circle at 14% 12%,rgba(71,255,132,.25) 0%,rgba(71,255,132,0) 35%),radial-gradient(circle at 86% 86%,rgba(159,255,207,.34) 0%,rgba(159,255,207,0) 38%),linear-gradient(180deg,#fff 0%,#f4fff8 48%,#e9fff1 100%); }
+.success-card { width: min(100%, 650px); padding: 42px; text-align: center; border: 1px solid #dce8e3; border-radius: 22px; background: white; box-shadow: 0 24px 60px rgba(16,35,66,.12); }
+.success-card-compact { width: min(100%, 590px); }
 .success-icon { display: grid; place-items: center; width: 70px; height: 70px; margin: 0 auto 25px; border-radius: 50%; background: #2ea36b; color: white; font-size: 36px; font-weight: 800; }
 .success-icon.is-unsuccessful { background: #dc2626; color: white; }
 .success-card h2 { color: #34495f; font-size: 22px; }
 .success-price { color: #102342; font-size: 34px; font-weight: 800; }
-.transaction-reference { display: grid; gap: 7px; margin: 28px 0; padding: 18px; border-radius: 10px; background: #f3f6f8; }
+.transaction-reference { display: grid; gap: 7px; margin: 22px 0; padding: 15px; border-radius: 10px; background: #f3f6f8; }
 .transaction-reference span { color: #6a7787; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
 .transaction-reference strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
 .invoice-pending-note { margin: 18px auto 0; max-width: 34rem; color: #6b7888; font-size: 12px; line-height: 1.6; }
-.success-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.success-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.success-action-button { display: inline-flex; min-width: 150px; min-height: 48px; align-items: center; justify-content: center; padding: 11px 18px; border: 1px solid var(--ainchors-green); border-radius: var(--radius-button); background: var(--ainchors-green); color: var(--ainchors-white); font-weight: 800; line-height: 1.2; box-shadow: 0 10px 22px rgba(55,173,130,.18); transition: background-color .2s ease,color .2s ease,box-shadow .2s ease; }
+.success-action-button:hover,.success-action-button:focus-visible { background: var(--ainchors-green-hero); color: #0f4c43; box-shadow: 0 8px 18px rgba(15,76,67,.12); }
+.success-countdown,.payment-waiting-status { margin: 14px 0 0; color: #6b7888; font-size: 12px; line-height: 1.5; }
+.payment-waiting-card p { line-height: 1.7; }
 
 .learning-hero { padding: 65px 0; border-bottom: 1px solid #c8f0df; background: radial-gradient(circle at 82% 18%,rgba(32,217,104,.28) 0%,rgba(32,217,104,0) 36%),linear-gradient(135deg,#e8fff7 0%,#f4fff9 56%,#fff 100%); color: #0f4c43; }
 .learning-hero a { display: inline-block; margin-bottom: 28px; color: #0f4c43; font-weight: 700; transition: color .2s ease; }

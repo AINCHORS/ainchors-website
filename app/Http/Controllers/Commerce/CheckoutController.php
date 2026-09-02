@@ -135,6 +135,12 @@ class CheckoutController extends Controller
             return back()->withErrors(['payment' => $exception->getMessage()]);
         }
 
+        if ($validated['payment_provider'] === 'paypal') {
+            return $hosted['order']->status === 'completed'
+                ? redirect()->route('checkout.success', $hosted['order'])
+                : redirect()->route('payments.paypal.waiting', $hosted['order']);
+        }
+
         return redirect()->away($hosted['redirect_url']);
     }
 

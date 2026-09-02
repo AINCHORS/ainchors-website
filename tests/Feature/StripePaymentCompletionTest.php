@@ -106,11 +106,13 @@ class StripePaymentCompletionTest extends TestCase
                 && str_contains($rendered, 'Thank you for choosing AINCHORS Training &amp; Consulting')
                 && str_contains($rendered, $order->order_number)
                 && str_contains($rendered, 'Transaction Reference')
-                && str_contains($rendered, 'View Stripe Invoice / Receipt');
+                && str_contains($rendered, 'View Receipt');
         });
         $this->actingAs($user)->get(route('checkout.success', $order))
             ->assertOk()
-            ->assertSee('View Provider Invoice')
+            ->assertSee('View Receipt')
+            ->assertSee('data-success-seconds="5"', false)
+            ->assertSee('data-success-redirect', false)
             ->assertSee(route('purchase-history.invoice', $invoice), false);
         $this->actingAs($user)->get(route('purchase-history.invoice', $invoice))
             ->assertRedirect('https://invoice.stripe.com/i/'.$sessionId);
@@ -183,7 +185,7 @@ class StripePaymentCompletionTest extends TestCase
         $invoiceReady = true;
         $this->actingAs($user)->get(route('checkout.success', $order))
             ->assertOk()
-            ->assertSee('View Provider Invoice');
+            ->assertSee('View Receipt');
 
         $this->assertDatabaseHas('external_invoices', [
             'order_id' => $order->id,

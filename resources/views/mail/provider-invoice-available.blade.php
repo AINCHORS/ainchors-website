@@ -42,7 +42,7 @@
                 <p style="margin:0;">Your official invoice/receipt has been generated and securely hosted by Stripe.</p>
             </td></tr>
             <tr><td align="center" style="padding:0 42px 18px;">
-                <a href="{{ $invoiceUrl }}" style="display:inline-block;min-width:210px;padding:13px 21px;border:1px solid #35b28a;border-radius:8px;background:#ffffff;color:#16835f;text-decoration:none;font-size:15px;font-weight:700;">View Stripe Invoice / Receipt</a>
+                <a href="{{ $invoiceUrl }}" style="display:inline-block;min-width:210px;padding:13px 21px;border:1px solid #35b28a;border-radius:8px;background:#ffffff;color:#16835f;text-decoration:none;font-size:15px;font-weight:700;">View Receipt</a>
             </td></tr>
             <tr><td style="padding:0 42px 28px;font-size:13px;line-height:1.6;color:#6b737c;">
                 <p style="margin:0 0 12px;">You can use the Stripe page above to view, download or print the official invoice PDF for your records.</p>

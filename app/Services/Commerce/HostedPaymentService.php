@@ -63,34 +63,51 @@ class HostedPaymentService
 
         [$order, $payment] = $this->checkout->prepareHostedOrder($user, $product, $idempotencyKey, 'paypal');
         $order->loadMissing(['user', 'items']);
-        $existingPayPalOrderId = (string) data_get($payment->provider_data, 'paypal_order_id', '');
-        $existingApprovalUrl = (string) data_get($payment->provider_data, 'paypal_approval_url', '');
-        if ($existingPayPalOrderId !== '' || $existingApprovalUrl !== '') {
-            $this->assertPaymentEnvironment($payment);
-            if ($existingPayPalOrderId === '' || ! $this->isTrustedPayPalApprovalUrl($existingApprovalUrl)) {
-                throw new RuntimeException('The existing PayPal checkout cannot be safely reused. Please try again.');
+        $this->assertPaymentEnvironment($payment);
+        if (filled(data_get($payment->provider_data, 'paypal_order_id'))) {
+            throw new RuntimeException('This legacy PayPal attempt cannot be reused. Please start a new checkout.');
+        }
+
+        $invoiceId = (string) data_get($payment->provider_data, 'paypal_invoice_id', '');
+        if ($invoiceId === '') {
+            try {
+                $created = $this->paypal->createInvoice($order);
+                $invoiceId = (string) $created['invoice_id'];
+                $payment = $this->payments->attachProviderReference($payment, $invoiceId, [
+                    'environment' => config('commerce.payment.environment'),
+                    'paypal_invoice_id' => $invoiceId,
+                    'stage' => 'paypal_invoice_draft_created',
+                ]);
+            } catch (RuntimeException $exception) {
+                $this->payments->markAttemptFailed($payment, 'PayPal provider invoice initialization failed.');
+                throw $exception;
             }
-
-            return ['order' => $order, 'redirect_url' => $existingApprovalUrl];
         }
 
-        try {
-            $paypalOrder = $this->paypal->createOrder($order);
-        } catch (RuntimeException $exception) {
-            $this->payments->markAttemptFailed($payment, 'PayPal hosted checkout initialization failed.');
-
-            throw $exception;
+        $invoice = $this->paypal->retrieveInvoice($invoiceId);
+        if (($invoice['status'] ?? null) === 'DRAFT') {
+            $this->paypal->sendInvoice($invoiceId, $order->idempotency_key);
+            $invoice = $this->paypal->retrieveInvoice($invoiceId);
         }
 
-        $paypalOrderId = (string) $paypalOrder['id'];
-        $approvalUrl = (string) $paypalOrder['approval_url'];
-        $this->payments->attachProviderReference($payment, $paypalOrderId, [
-            'environment' => config('commerce.payment.environment'),
-            'paypal_order_id' => $paypalOrderId,
-            'paypal_approval_url' => $approvalUrl,
-        ]);
+        if (($invoice['status'] ?? null) === 'PAID') {
+            return [
+                'order' => $this->completeVerifiedPayPalInvoice($order, $payment, $invoice),
+                'redirect_url' => route('checkout.success', $order),
+            ];
+        }
 
-        return ['order' => $order, 'redirect_url' => $approvalUrl];
+        $invoiceUrl = $this->assertPayPalInvoiceCanBePaid($invoice, $order, $payment);
+        $this->externalInvoices->record(
+            $order,
+            'paypal',
+            $invoiceId,
+            $invoiceUrl,
+            filled(data_get($invoice, 'detail.invoice_number')) ? (string) data_get($invoice, 'detail.invoice_number') : null,
+            'unpaid',
+        );
+
+        return ['order' => $order, 'redirect_url' => $invoiceUrl];
     }
 
     public function completeStripeReturn(Order $order, string $sessionId): Order
@@ -152,27 +169,6 @@ class HostedPaymentService
         }
     }
 
-    public function completePayPalReturn(Order $order, string $paypalOrderId): Order
-    {
-        $payment = $order->payments()
-            ->where('provider', 'paypal')
-            ->get()
-            ->first(fn (Payment $candidate): bool => $candidate->provider_transaction_id === $paypalOrderId
-                || data_get($candidate->provider_data, 'paypal_order_id') === $paypalOrderId);
-        if (! $payment) {
-            throw new RuntimeException('This PayPal payment does not belong to the AINCHORS order.');
-        }
-        $this->assertPaymentEnvironment($payment);
-
-        if ($order->status === 'completed' && $payment->status === 'paid') {
-            return $order->fresh();
-        }
-
-        $capturedOrder = $this->paypal->captureOrder($paypalOrderId, $order->idempotency_key);
-
-        return $this->completeVerifiedPayPalOrder($order, $payment, $capturedOrder);
-    }
-
     /** @param array<string, mixed> $session */
     public function completeStripeWebhook(array $session): void
     {
@@ -205,61 +201,55 @@ class HostedPaymentService
         $this->recordStripeInvoice($completed, $session);
     }
 
-    /** @param array<string, mixed> $resource */
-    public function completePayPalWebhook(array $resource): void
+    public function completePayPalInvoiceWebhook(string $invoiceId): void
     {
-        $captureId = (string) ($resource['id'] ?? '');
-        $paypalOrderId = (string) data_get($resource, 'supplementary_data.related_ids.order_id', '');
-        if (($resource['status'] ?? null) !== 'COMPLETED' || $captureId === '' || $paypalOrderId === '') {
-            throw new RuntimeException('PayPal has not confirmed a completed capture for one order.');
+        if (! str_starts_with($invoiceId, 'INV2-')) {
+            throw new RuntimeException('PayPal did not identify one provider invoice.');
         }
 
         $payment = Payment::query()
             ->where('provider', 'paypal')
             ->whereIn('status', ['pending', 'processing', 'paid'])
             ->get()
-            ->first(fn (Payment $candidate): bool => $candidate->provider_transaction_id === $paypalOrderId
-                || data_get($candidate->provider_data, 'paypal_order_id') === $paypalOrderId);
+            ->first(fn (Payment $candidate): bool => data_get($candidate->provider_data, 'paypal_invoice_id') === $invoiceId);
 
         if (! $payment) {
             return;
         }
         $this->assertPaymentEnvironment($payment);
 
-        $order = $payment->order;
-        if ($order->status === 'completed' && $payment->status === 'paid') {
-            return;
-        }
-
-        $this->completeVerifiedPayPalOrder(
-            $order,
-            $payment,
-            $this->paypal->retrieveOrder($paypalOrderId),
-            $captureId,
-        );
+        $this->completeVerifiedPayPalInvoice($payment->order, $payment, $this->paypal->retrieveInvoice($invoiceId));
     }
 
-    /** @param array<string, mixed> $paypalOrder */
-    private function completeVerifiedPayPalOrder(
-        Order $order,
-        Payment $payment,
-        array $paypalOrder,
-        ?string $expectedCaptureId = null,
-    ): Order {
-        $capture = $this->assertPayPalOrderMatchesOrder($paypalOrder, $order, $payment, $expectedCaptureId);
-
-        return $this->checkout->completeHostedPayment(
+    /** @param array<string, mixed> $invoice */
+    private function completeVerifiedPayPalInvoice(Order $order, Payment $payment, array $invoice): Order
+    {
+        $verified = $this->assertPayPalInvoicePaid($invoice, $order, $payment);
+        $completed = $this->checkout->completeHostedPayment(
             $order,
             'paypal',
-            (string) $capture['id'],
-            array_merge($this->safeProviderData($paypalOrder), [
+            $verified['payment_id'],
+            [
                 'environment' => config('commerce.payment.environment'),
-                'paypal_order_id' => (string) $paypalOrder['id'],
-                'paypal_capture_id' => (string) $capture['id'],
-            ]),
-            (string) data_get($capture, 'amount.value', ''),
-            (string) data_get($capture, 'amount.currency_code', ''),
+                'paypal_invoice_id' => $verified['invoice_id'],
+                'paypal_payment_id' => $verified['payment_id'],
+                'stage' => 'paypal_invoice_paid_verified',
+            ],
+            $verified['amount'],
+            $verified['currency'],
         );
+
+        $externalInvoice = $this->externalInvoices->record(
+            $completed,
+            'paypal',
+            $verified['invoice_id'],
+            $verified['invoice_url'],
+            $verified['invoice_number'],
+            'paid',
+        );
+        $this->invoiceMailer->sendOnce($externalInvoice);
+
+        return $completed;
     }
 
     /** @return array<string, mixed> */
@@ -339,56 +329,90 @@ class HostedPaymentService
         $this->assertPaymentEnvironment($payment);
     }
 
+    /** @param array<string, mixed> $invoice */
+    private function assertPayPalInvoiceCanBePaid(array $invoice, Order $order, Payment $payment): string
+    {
+        $invoiceId = (string) ($invoice['id'] ?? '');
+        $invoiceUrl = (string) data_get($invoice, 'detail.metadata.recipient_view_url', '');
+        if (($invoice['status'] ?? null) !== 'UNPAID'
+            || $invoiceId === ''
+            || data_get($payment->provider_data, 'paypal_invoice_id') !== $invoiceId
+            || (string) data_get($invoice, 'detail.reference', '') !== $order->order_number
+            || ! $this->moneyMatches((string) data_get($invoice, 'amount.value', ''), (string) $order->total_amount, $order->currency)
+            || strtoupper((string) data_get($invoice, 'amount.currency_code', '')) !== strtoupper($order->currency)
+            || ! $this->externalInvoices->isTrustedProviderUrl('paypal', $invoiceUrl)) {
+            throw new RuntimeException('PayPal did not return a payable invoice for this exact order.');
+        }
+
+        return $invoiceUrl;
+    }
+
     /**
-     * @param  array<string, mixed>  $paypalOrder
-     * @return array<string, mixed>
+     * @param array<string, mixed> $invoice
+     * @return array{invoice_id:string,payment_id:string,amount:string,currency:string,invoice_url:string,invoice_number:?string}
      */
-    private function assertPayPalOrderMatchesOrder(
-        array $paypalOrder,
-        Order $order,
-        Payment $payment,
-        ?string $expectedCaptureId = null,
-    ): array {
-        $paypalOrderId = (string) ($paypalOrder['id'] ?? '');
-        $purchaseUnits = (array) ($paypalOrder['purchase_units'] ?? []);
-        $purchaseUnit = is_array($purchaseUnits[0] ?? null) ? $purchaseUnits[0] : [];
-        $captures = (array) data_get($purchaseUnit, 'payments.captures', []);
-        $capture = is_array($captures[0] ?? null) ? $captures[0] : [];
-        $captureId = (string) ($capture['id'] ?? '');
-        $relatedOrderId = (string) data_get($capture, 'supplementary_data.related_ids.order_id', '');
-        if ($relatedOrderId === '') {
-            $upLink = collect($capture['links'] ?? [])->first(
-                fn ($link): bool => is_array($link) && ($link['rel'] ?? null) === 'up',
-            );
-            $relatedOrderId = basename((string) data_get($upLink, 'href', ''));
-        }
-        $expectedAmount = number_format(
-            (float) $order->total_amount,
-            strtoupper($order->currency) === 'JPY' ? 0 : 2,
-            '.',
-            '',
-        );
-
-        if (($paypalOrder['status'] ?? null) !== 'COMPLETED'
-            || $paypalOrderId === ''
-            || $payment->provider_transaction_id !== $paypalOrderId
-            || data_get($payment->provider_data, 'paypal_order_id') !== $paypalOrderId
-            || count($purchaseUnits) !== 1
-            || (string) ($purchaseUnit['reference_id'] ?? '') !== $order->order_number
-            || (string) ($purchaseUnit['custom_id'] ?? '') !== $order->order_number
-            || (string) data_get($purchaseUnit, 'amount.value', '') !== $expectedAmount
-            || strtoupper((string) data_get($purchaseUnit, 'amount.currency_code', '')) !== strtoupper($order->currency)
-            || count($captures) !== 1
-            || ($capture['status'] ?? null) !== 'COMPLETED'
-            || $captureId === ''
-            || ($expectedCaptureId !== null && $captureId !== $expectedCaptureId)
-            || $relatedOrderId !== $paypalOrderId
-            || (string) data_get($capture, 'amount.value', '') !== $expectedAmount
-            || strtoupper((string) data_get($capture, 'amount.currency_code', '')) !== strtoupper($order->currency)) {
-            throw new RuntimeException('PayPal has not confirmed this order as an exact completed payment.');
+    private function assertPayPalInvoicePaid(array $invoice, Order $order, Payment $payment): array
+    {
+        $invoiceId = (string) ($invoice['id'] ?? '');
+        $allTransactions = collect(data_get($invoice, 'payments.transactions', []));
+        $transactions = $allTransactions
+            ->filter(fn ($transaction): bool => is_array($transaction)
+                && strtoupper((string) ($transaction['type'] ?? '')) === 'PAYPAL'
+                && strtoupper((string) ($transaction['method'] ?? '')) === 'PAYPAL'
+                && strtoupper((string) ($transaction['transaction_status'] ?? '')) === 'SUCCESS'
+                && filled($transaction['payment_id'] ?? null));
+        if ($allTransactions->count() !== 1 || $transactions->count() !== 1) {
+            throw new RuntimeException('PayPal has not confirmed one genuine successful PayPal transaction.');
         }
 
-        return $capture;
+        $transaction = $transactions->first();
+        $amount = (string) data_get($transaction, 'amount.value', '');
+        $currency = strtoupper((string) data_get($transaction, 'amount.currency_code', ''));
+        $paidAmount = (string) data_get($invoice, 'payments.paid_amount.value', '');
+        $paidCurrency = strtoupper((string) data_get($invoice, 'payments.paid_amount.currency_code', ''));
+        $invoiceUrl = (string) data_get($invoice, 'detail.metadata.recipient_view_url', '');
+
+        if (($invoice['status'] ?? null) !== 'PAID'
+            || $invoiceId === ''
+            || data_get($payment->provider_data, 'paypal_invoice_id') !== $invoiceId
+            || (string) data_get($invoice, 'detail.reference', '') !== $order->order_number
+            || ! $this->moneyMatches((string) data_get($invoice, 'amount.value', ''), (string) $order->total_amount, $order->currency)
+            || ! $this->moneyMatches($paidAmount, (string) $order->total_amount, $order->currency)
+            || ! $this->moneyMatches($amount, (string) $order->total_amount, $order->currency)
+            || strtoupper((string) data_get($invoice, 'amount.currency_code', '')) !== strtoupper($order->currency)
+            || $paidCurrency !== strtoupper($order->currency)
+            || $currency !== strtoupper($order->currency)
+            || ! $this->externalInvoices->isTrustedProviderUrl('paypal', $invoiceUrl)) {
+            throw new RuntimeException('PayPal has not confirmed this invoice as an exact completed payment.');
+        }
+
+        return [
+            'invoice_id' => $invoiceId,
+            'payment_id' => (string) $transaction['payment_id'],
+            'amount' => $amount,
+            'currency' => $currency,
+            'invoice_url' => $invoiceUrl,
+            'invoice_number' => filled(data_get($invoice, 'detail.invoice_number')) ? (string) data_get($invoice, 'detail.invoice_number') : null,
+        ];
+    }
+
+    private function moneyMatches(string $actual, string $expected, string $currency): bool
+    {
+        $scale = strtoupper($currency) === 'JPY' ? 0 : 2;
+        $normalize = static function (string $value) use ($scale): ?string {
+            if (! preg_match('/^\d+(?:\.\d+)?$/', $value)) {
+                return null;
+            }
+            [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
+            if (strlen($fraction) > $scale && trim(substr($fraction, $scale), '0') !== '') {
+                return null;
+            }
+            $whole = ltrim($whole, '0') ?: '0';
+
+            return $scale === 0 ? $whole : $whole.str_pad(substr($fraction, 0, $scale), $scale, '0');
+        };
+
+        return $normalize($actual) !== null && $normalize($actual) === $normalize($expected);
     }
 
     private function assertPaymentEnvironment(Payment $payment): void
@@ -406,15 +430,4 @@ class HostedPaymentService
         }
     }
 
-    private function isTrustedPayPalApprovalUrl(string $url): bool
-    {
-        $parts = parse_url($url);
-        $expectedHost = config('commerce.payment.environment') === 'live'
-            ? 'www.paypal.com'
-            : 'www.sandbox.paypal.com';
-
-        return ($parts['scheme'] ?? null) === 'https'
-            && strtolower((string) ($parts['host'] ?? '')) === $expectedHost
-            && ! isset($parts['user'], $parts['pass']);
-    }
 }

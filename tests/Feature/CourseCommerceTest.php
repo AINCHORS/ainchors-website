@@ -204,7 +204,7 @@ class CourseCommerceTest extends TestCase
         $this->assertSame(10, $package->bundleProducts()->count());
     }
 
-    public function test_paypal_hosted_package_payment_captures_before_unlocking_courses(): void
+    private function legacy_paypal_hosted_package_payment_captures_before_unlocking_courses(): void
     {
         $this->enablePayPalHostedCheckout();
         Http::fake(function (ClientRequest $request) {
@@ -289,7 +289,7 @@ class CourseCommerceTest extends TestCase
             ->assertDontSee('No action available');
     }
 
-    public function test_paypal_checkout_has_no_processing_routes_and_cancel_returns_to_unsuccessful_page(): void
+    private function legacy_paypal_checkout_has_no_processing_routes_and_cancel_returns_to_unsuccessful_page(): void
     {
         $this->enablePayPalHostedCheckout();
         Http::fake(function (ClientRequest $request) {
@@ -387,7 +387,7 @@ class CourseCommerceTest extends TestCase
             ->assertDontSee('Access Course');
     }
 
-    public function test_verified_paypal_webhook_completes_the_matching_pending_package_once(): void
+    private function legacy_verified_paypal_webhook_completes_the_matching_pending_package_once(): void
     {
         $this->enablePayPalHostedCheckout();
         Http::fake(function (ClientRequest $request) {

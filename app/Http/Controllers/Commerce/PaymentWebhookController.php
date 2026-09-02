@@ -49,8 +49,15 @@ class PaymentWebhookController extends Controller
             if (! $this->paypal->webhookIsVerified($headers, $event)) {
                 return response()->json(['received' => false], 400);
             }
-            if (($event['event_type'] ?? null) === 'PAYMENT.CAPTURE.COMPLETED') {
-                $this->hostedPayments->completePayPalWebhook((array) ($event['resource'] ?? []));
+            if (($event['event_type'] ?? null) === 'INVOICING.INVOICE.PAID') {
+                $invoiceId = (string) data_get($event, 'resource.id', '');
+                if ($invoiceId === '') {
+                    $self = collect(data_get($event, 'resource.links', []))->first(
+                        fn ($link): bool => is_array($link) && ($link['rel'] ?? null) === 'self',
+                    );
+                    $invoiceId = basename((string) data_get($self, 'href', ''));
+                }
+                $this->hostedPayments->completePayPalInvoiceWebhook($invoiceId);
             }
         } catch (RuntimeException $exception) {
             report($exception);
