@@ -41,7 +41,7 @@
                       }
                   },
               }"
-              @submit="prepareHostedPayment()">
+              @submit="submitting = true">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $token }}">
 
@@ -112,7 +112,7 @@
                             @endif
                         </fieldset>
 
-                        <button type="submit" class="primary-button form-button checkout-provider-cta" :disabled="submitting" x-text="submitting ? 'Redirecting…' : `Continue with ${provider === 'paypal' ? 'PayPal' : 'Stripe'}`">Continue with {{ str($availableProviders[0] ?? 'payment provider')->headline() }}</button>
+                        <button type="submit" class="primary-button form-button checkout-provider-cta" :disabled="submitting" @click="prepareHostedPayment()" x-text="submitting ? 'Redirecting…' : `Continue with ${provider === 'paypal' ? 'PayPal' : 'Stripe'}`">Continue with {{ str($availableProviders[0] ?? 'payment provider')->headline() }}</button>
                     @endif
                     @error('payment_provider')<p class="form-error">{{ $message }}</p>@enderror
                 @endif
