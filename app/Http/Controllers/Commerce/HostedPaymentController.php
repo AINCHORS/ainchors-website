@@ -44,6 +44,11 @@ class HostedPaymentController extends Controller
         return redirect()->route('checkout.success', $order);
     }
 
+    public function paypalHandoff(): View
+    {
+        return view('checkout.paypal-handoff');
+    }
+
     public function cancel(Request $request, string $provider, Order $order): RedirectResponse
     {
         $this->assertOwned($request, $order);
