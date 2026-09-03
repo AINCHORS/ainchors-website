@@ -111,6 +111,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/checkouts/{product:slug}', [CheckoutController::class, 'show'])->name('checkout.show');
     Route::post('/checkouts/{product:slug}', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/payments/stripe/{order:order_number}/return', [HostedPaymentController::class, 'stripeReturn'])->name('payments.stripe.return');
+    Route::get('/payments/paypal/handoff', [HostedPaymentController::class, 'paypalHandoff'])->name('payments.paypal.handoff');
     Route::get('/payments/paypal/{order:order_number}/waiting', [HostedPaymentController::class, 'paypalWaiting'])->name('payments.paypal.waiting');
     Route::get('/payments/paypal/{order:order_number}/waiting/status', [HostedPaymentController::class, 'paypalStatus'])->name('payments.paypal.status');
     Route::get('/payments/{provider}/{order:order_number}/cancel', [HostedPaymentController::class, 'cancel'])->name('payments.cancel');
