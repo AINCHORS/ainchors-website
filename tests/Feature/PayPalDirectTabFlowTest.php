@@ -35,7 +35,7 @@ class PayPalDirectTabFlowTest extends TestCase
         $this->assertStringContainsString('formtarget="ainchors-paypal-payment"', $html);
         $this->assertStringContainsString('data-paypal-waiting-target-url=', $html);
         $this->assertStringContainsString('Continue with PayPal', $html);
-        $this->assertStringNotContainsString(route('payments.paypal.handoff'), $html);
+        $this->assertStringNotContainsString('/payments/paypal/handoff', $html);
         $this->assertStringNotContainsString('window.open(', $html);
         $this->assertStringNotContainsString('postMessage(', $html);
         $this->assertStringNotContainsString('Preparing secure PayPal payment', $html);
