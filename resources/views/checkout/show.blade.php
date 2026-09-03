@@ -19,16 +19,47 @@
 
         <form method="POST" action="{{ route('checkout.store', $product) }}" class="checkout-grid"
               x-ref="checkoutForm"
+              data-paypal-waiting-target-url="{{ in_array('paypal', $availableProviders, true) ? route('checkout.paypal.waiting-target', ['product' => $product, 'checkout_token' => $token]) : '' }}"
               x-data="{
                   submitting: false,
                   provider: @js($availableProviders[0] ?? ''),
-                  prepareHostedPayment() {
+                  paypalWaitingTimer: null,
+                  startPayPalWaitingTargetPolling() {
+                      const targetUrl = this.$refs.checkoutForm.dataset.paypalWaitingTargetUrl;
+                      if (!targetUrl) return;
+
+                      const check = async () => {
+                          try {
+                              const response = await fetch(targetUrl, {
+                                  headers: { 'Accept': 'application/json' },
+                                  credentials: 'same-origin',
+                                  cache: 'no-store',
+                              });
+                              if (response.ok) {
+                                  const result = await response.json();
+                                  if (result.state === 'ready' && result.redirect_url) {
+                                      window.clearTimeout(this.paypalWaitingTimer);
+                                      window.location.assign(result.redirect_url);
+                                      return;
+                                  }
+                              }
+                          } catch (_) {
+                              // The provider tab owns the checkout request; keep waiting quietly here.
+                          }
+
+                          this.paypalWaitingTimer = window.setTimeout(check, 500);
+                      };
+
+                      window.clearTimeout(this.paypalWaitingTimer);
+                      this.paypalWaitingTimer = window.setTimeout(check, 250);
+                  },
+                  handleCheckoutSubmit() {
                       if (this.submitting) return;
                       this.submitting = true;
-                      window.setTimeout(() => this.$refs.checkoutForm.requestSubmit(this.$refs.checkoutSubmit), 0);
+                      if (this.provider === 'paypal') this.startPayPalWaitingTargetPolling();
                   },
               }"
-              @submit="submitting = true">
+              @submit="handleCheckoutSubmit()">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $token }}">
 
@@ -99,22 +130,19 @@
                             @endif
                         </fieldset>
 
-                        <a x-cloak
-                           x-show="provider === 'paypal'"
-                           href="{{ route('payments.paypal.handoff') }}"
-                           target="ainchors-paypal-payment"
-                           class="primary-button form-button checkout-provider-cta"
-                           :class="{ 'pointer-events-none opacity-70': submitting }"
-                           :aria-disabled="submitting.toString()"
-                           @click="prepareHostedPayment()">Continue with PayPal</a>
+                        <button x-cloak
+                                x-show="provider === 'paypal'"
+                                type="submit"
+                                formtarget="ainchors-paypal-payment"
+                                class="primary-button form-button checkout-provider-cta"
+                                :disabled="submitting"
+                                x-text="submitting ? 'Opening PayPal…' : 'Continue with PayPal'">Continue with PayPal</button>
 
                         <button x-show="provider !== 'paypal'"
                                 type="submit"
                                 class="primary-button form-button checkout-provider-cta"
                                 :disabled="submitting"
                                 x-text="submitting ? 'Redirecting…' : 'Continue with Stripe'">Continue with Stripe</button>
-
-                        <button x-ref="checkoutSubmit" type="submit" class="sr-only" tabindex="-1" aria-hidden="true">Continue</button>
                     @endif
                     @error('payment_provider')<p class="form-error">{{ $message }}</p>@enderror
                 @endif
