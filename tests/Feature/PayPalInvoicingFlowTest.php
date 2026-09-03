@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -21,6 +22,7 @@ class PayPalInvoicingFlowTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+        Cache::flush();
         $this->artisan('ainchors:populate-legacy-course-catalogue')->assertExitCode(0);
         $this->artisan('ainchors:populate-course-learning-content')->assertExitCode(0);
     }
@@ -91,7 +93,18 @@ class PayPalInvoicingFlowTest extends TestCase
             ->assertOk()
             ->assertJson(['state' => 'pending']);
 
-        Http::assertSentCount(10);
+        $recorded = collect(Http::recorded());
+        $this->assertSame(1, $recorded->filter(
+            fn (array $record): bool => str_ends_with($record[0]->url(), '/v1/oauth2/token')
+        )->count());
+        $this->assertSame(1, $recorded->filter(
+            fn (array $record): bool => $record[0]->method() === 'POST'
+                && str_ends_with($record[0]->url(), '/v2/invoicing/invoices')
+        )->count());
+        $this->assertSame(1, $recorded->filter(
+            fn (array $record): bool => $record[0]->method() === 'POST'
+                && str_ends_with($record[0]->url(), '/'.$invoiceId.'/send')
+        )->count());
         Http::assertSent(fn (ClientRequest $request): bool =>
             $request->method() === 'POST'
             && str_ends_with($request->url(), '/v2/invoicing/invoices')
@@ -209,7 +222,9 @@ class PayPalInvoicingFlowTest extends TestCase
             ->assertSee('Access Course')
             ->assertSee('My Courses')
             ->assertSee('View Receipt')
-            ->assertSee('data-success-seconds="5"', false)
+            ->assertDontSee('Redirecting in')
+            ->assertDontSee('data-success-seconds', false)
+            ->assertDontSee('data-success-redirect', false)
             ->assertSee(route('purchase-history.invoice', $externalInvoice), false);
         $this->actingAs($user)->get(route('purchase-history'))
             ->assertOk()
