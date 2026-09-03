@@ -4,6 +4,7 @@ namespace App\Services\Commerce\Gateways;
 
 use App\Models\Order;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
@@ -193,6 +194,12 @@ class PayPalGateway
             throw new RuntimeException('PayPal is not configured.');
         }
 
+        $cacheKey = $this->accessTokenCacheKey($clientId);
+        $cachedToken = Cache::get($cacheKey);
+        if (is_string($cachedToken) && $cachedToken !== '') {
+            return $cachedToken;
+        }
+
         try {
             $response = Http::asForm()
                 ->withBasicAuth($clientId, $secret)
@@ -208,7 +215,18 @@ class PayPalGateway
             throw new RuntimeException('PayPal authentication failed.');
         }
 
+        $expiresIn = max(60, (int) ($response->json('expires_in') ?? 300));
+        Cache::put($cacheKey, $token, now()->addSeconds(max(30, $expiresIn - 60)));
+
         return $token;
+    }
+
+    private function accessTokenCacheKey(string $clientId): string
+    {
+        return 'commerce:paypal:oauth:'.hash(
+            'sha256',
+            (string) config('commerce.payment.environment').'|'.$clientId,
+        );
     }
 
     private function apiUrl(string $path): string
