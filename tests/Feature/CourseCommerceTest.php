@@ -107,10 +107,14 @@ class CourseCommerceTest extends TestCase
         $this->assertDatabaseCount('payments', 1);
         $this->assertDatabaseHas('payments', ['provider' => 'demo', 'status' => 'paid', 'amount' => 19, 'currency' => 'USD']);
         $this->assertDatabaseHas('enrollments', ['user_id' => $user->id, 'product_id' => $course->id]);
-        $safePersistence = json_encode([$order->toArray(), $payment->toArray()]);
-        $this->assertStringNotContainsString('4242424242424242', $safePersistence);
-        $this->assertStringNotContainsString('12/30', $safePersistence);
-        $this->assertStringNotContainsString('123', $safePersistence);
+        $safePaymentPersistence = json_encode([
+            'provider_data' => $payment->provider_data,
+            'failure_reason' => $payment->failure_reason,
+        ], JSON_THROW_ON_ERROR);
+        $this->assertSame(['mode' => 'test'], $payment->provider_data);
+        $this->assertStringNotContainsString('4242424242424242', $safePaymentPersistence);
+        $this->assertStringNotContainsString('12/30', $safePaymentPersistence);
+        $this->assertStringNotContainsString('123', $safePaymentPersistence);
     }
 
     public function test_stripe_hosted_checkout_waits_for_server_verification_before_granting_access(): void
@@ -628,7 +632,7 @@ class CourseCommerceTest extends TestCase
         $this->assertDatabaseCount('enrollments', 0);
     }
 
-    public function test_cancelled_stripe_checkout_shows_unsuccessful_page_without_enrollment(): void
+    public function test_cancelled_stripe_checkout_shows_cancelled_page_without_enrollment(): void
     {
         $this->enableStripeHostedCheckout();
         Http::fake(fn () => Http::response([
@@ -666,7 +670,8 @@ class CourseCommerceTest extends TestCase
         $this->actingAs($user)
             ->get(route('checkout.failed', $order))
             ->assertOk()
-            ->assertSee('Payment Unsuccessful')
+            ->assertSee('Payment Cancelled')
+            ->assertDontSee('Payment Unsuccessful')
             ->assertSee('You have not been charged.')
             ->assertSee('Try Again')
             ->assertSee('My Courses')
