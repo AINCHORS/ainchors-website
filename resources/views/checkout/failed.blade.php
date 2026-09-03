@@ -10,7 +10,7 @@
     <div class="success-card payment-state-card">
         <div class="success-icon is-unsuccessful" aria-hidden="true">×</div>
         <span class="eyebrow">{{ $state === 'cancelled' ? 'Payment cancelled' : 'Payment failed' }}</span>
-        <h1>{{ $pageTitle }}</h1>
+        <h1 class="payment-result-title">{{ $pageTitle }}</h1>
         <h2>{{ $item->product_name }}</h2>
 
         @if ($state === 'cancelled')
@@ -33,4 +33,5 @@
         </div>
     </div>
 </section>
+@include('checkout.partials.payment-state-styles')
 @endsection
