@@ -7,7 +7,7 @@
 @section('title', 'Payment Successful | AINCHORS')
 
 @section('content')
-<section class="success-section" data-success-redirect="{{ route('purchase-history') }}" data-success-seconds="5">
+<section class="success-section">
     <div class="success-card success-card-compact">
         <div class="success-icon">✓</div>
         <span class="eyebrow">Payment complete</span>
@@ -38,37 +38,6 @@
         @elseif (! $invoice)
             <p class="invoice-pending-note">The verified payment and order reference are available in Purchase History.</p>
         @endif
-        <p class="success-countdown" role="status" aria-live="polite">Redirecting in <span>5</span> seconds…</p>
     </div>
 </section>
-
-<script>
-(() => {
-    const section = document.querySelector('[data-success-redirect]');
-    if (!section) return;
-
-    const output = section.querySelector('.success-countdown span');
-    let seconds = Number(section.dataset.successSeconds || 5);
-    let cancelled = false;
-    let timer;
-
-    const stopRedirect = () => {
-        cancelled = true;
-        window.clearTimeout(timer);
-    };
-    section.querySelectorAll('.success-actions a').forEach(link => link.addEventListener('click', stopRedirect));
-
-    const tick = () => {
-        if (cancelled) return;
-        output.textContent = String(seconds);
-        if (seconds <= 0) {
-            window.location.assign(section.dataset.successRedirect);
-            return;
-        }
-        seconds -= 1;
-        timer = window.setTimeout(tick, 1000);
-    };
-    tick();
-})();
-</script>
 @endsection
