@@ -17,7 +17,7 @@
         @endif
         <p class="payment-waiting-status" role="status" aria-live="polite">Opening PayPal and waiting for verified payment confirmation…</p>
         <div class="success-actions payment-waiting-actions">
-            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment">Reopen PayPal</a>
+            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment" aria-label="Reopen PayPal Payment">Reopen PayPal</a>
             <a data-paypal-cancel class="success-action-button" href="{{ route('payments.cancel', ['provider' => 'paypal', 'order' => $order]) }}">Cancel Payment</a>
             <a class="success-action-button" href="{{ route('purchase-history') }}">Purchase History</a>
         </div>
