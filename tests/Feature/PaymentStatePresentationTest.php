@@ -28,7 +28,7 @@ class PaymentStatePresentationTest extends TestCase
 
         $this->assertIsString($css);
         $this->assertIsString($stateStyles);
-        $this->assertStringContainsString('.payment-state-card { width: min(100%, 520px); min-height: 560px;', $css);
+        $this->assertStringContainsString('.payment-state-card { width: min(100%, 620px); min-height: 700px;', $css);
         $this->assertStringContainsString('.payment-state-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr));', $css);
         $this->assertStringContainsString('.payment-state-button {', $css);
         $this->assertStringContainsString('background: #37ad82;', $css);
@@ -38,7 +38,7 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertStringContainsString('.payment-state-actions { grid-template-columns: 1fr; }', $css);
     }
 
-    public function test_terminal_payment_titles_stay_on_one_line_without_forcing_the_waiting_title(): void
+    public function test_terminal_payment_titles_stay_on_one_line_and_inside_the_card_without_forcing_the_waiting_title(): void
     {
         $success = file_get_contents(resource_path('views/checkout/success.blade.php'));
         $failed = file_get_contents(resource_path('views/checkout/failed.blade.php'));
@@ -52,7 +52,7 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertStringContainsString('<h1 class="payment-result-title">Payment Successful</h1>', $success);
         $this->assertStringContainsString('<h1 class="payment-result-title">{{ $pageTitle }}</h1>', $failed);
         $this->assertStringNotContainsString('payment-result-title', $waiting);
-        $this->assertStringContainsString('.payment-result-title { font-size: clamp(30px,4vw,42px); white-space: nowrap;', $stateStyles);
+        $this->assertStringContainsString('.payment-result-title { font-size: clamp(22px,7vw,40px); max-width: 100%; white-space: nowrap;', $stateStyles);
     }
 
     public function test_failed_and_cancelled_states_do_not_mix_primary_and_secondary_button_variants(): void
