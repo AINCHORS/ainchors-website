@@ -6,15 +6,14 @@
 <section class="success-section">
     <div class="success-card success-card-compact payment-waiting-card"
          data-paypal-waiting
-         data-invoice-url="{{ $invoiceUrl }}"
          data-status-url="{{ route('payments.paypal.status', $order) }}">
         <span class="eyebrow">Secure PayPal payment</span>
         <h1>Complete payment with PayPal</h1>
-        <p>PayPal opens in a separate browser tab while this AINCHORS page stays available to verify the payment. AINCHORS will continue only after the server confirms the payment directly with PayPal.</p>
+        <p>PayPal is open in another browser tab. Complete the payment there while AINCHORS verifies the result directly with PayPal.</p>
         @if (session('payment_cancel_error'))
             <p class="form-error" role="alert">{{ session('payment_cancel_error') }}</p>
         @endif
-        <p class="payment-waiting-status" role="status" aria-live="polite">Connecting the PayPal tab and waiting for verified payment confirmation…</p>
+        <p class="payment-waiting-status" role="status" aria-live="polite">Waiting for verified PayPal payment confirmation…</p>
         <div class="success-actions payment-waiting-actions">
             <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment" rel="noopener noreferrer" aria-label="Reopen PayPal Payment">Reopen PayPal</a>
             <a data-paypal-cancel class="success-action-button" href="{{ route('payments.cancel', ['provider' => 'paypal', 'order' => $order]) }}">Cancel Payment</a>
@@ -46,7 +45,6 @@
     const card = document.querySelector('[data-paypal-waiting]');
     if (!card) return;
 
-    const invoiceUrl = card.dataset.invoiceUrl;
     const statusUrl = card.dataset.statusUrl;
     const status = card.querySelector('[role="status"]');
     let statusTimer = null;
@@ -90,21 +88,6 @@
             scheduleCheck();
         }
     };
-
-    window.addEventListener('message', (event) => {
-        if (terminal || event.origin !== window.location.origin) return;
-        if (!event.data || event.data.type !== 'ainchors-paypal-handoff-ready') return;
-
-        try {
-            event.source?.postMessage({
-                type: 'ainchors-paypal-handoff-invoice',
-                invoiceUrl,
-            }, event.origin);
-            status.textContent = 'PayPal is opening in the payment tab. Waiting for verified payment confirmation…';
-        } catch (_) {
-            status.textContent = 'PayPal could not open automatically. Select Reopen PayPal to continue.';
-        }
-    });
 
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) scheduleCheck(0);
