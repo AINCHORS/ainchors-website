@@ -18,7 +18,7 @@ class PayPalCheckoutGuidanceTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_continue_with_paypal_preopens_the_named_window_from_the_button_click_gesture(): void
+    public function test_continue_with_paypal_opens_a_branded_handoff_tab_without_popup_features(): void
     {
         $this->enablePayPal();
         $user = User::factory()->create([
@@ -45,9 +45,29 @@ class PayPalCheckoutGuidanceTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('@click="prepareHostedPayment()"', $html);
-        $this->assertStringContainsString("window.open(\n                          '',\n                          'ainchors-paypal-payment'", $html);
-        $this->assertStringContainsString('Preparing secure PayPal payment…', $html);
+        $this->assertStringContainsString(route('payments.paypal.handoff'), $html);
+        $this->assertStringContainsString("'ainchors-paypal-payment'", $html);
+        $this->assertStringNotContainsString('popup=yes', $html);
+        $this->assertStringNotContainsString('Preparing secure PayPal payment…', $html);
         $this->assertStringNotContainsString('@submit="prepareHostedPayment()"', $html);
+    }
+
+    public function test_paypal_handoff_tab_redirects_itself_after_the_waiting_page_supplies_the_invoice_url(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('payments.paypal.handoff'))
+            ->assertOk()
+            ->assertSee('Connecting to PayPal');
+
+        $html = (string) $response->getContent();
+        $this->assertStringContainsString('ainchors-paypal-handoff-ready', $html);
+        $this->assertStringContainsString('ainchors-paypal-handoff-invoice', $html);
+        $this->assertStringContainsString('window.opener.postMessage', $html);
+        $this->assertStringContainsString('window.opener = null', $html);
+        $this->assertStringContainsString('window.location.replace(invoiceUrl)', $html);
+        $this->assertStringNotContainsString('window.open(', $html);
     }
 
     public function test_paypal_waiting_card_matches_success_card_width_and_uses_equal_action_layout(): void
@@ -60,7 +80,10 @@ class PayPalCheckoutGuidanceTest extends TestCase
         $this->assertStringContainsString('class="success-card success-card-compact payment-waiting-card"', $html);
         $this->assertStringContainsString('class="success-actions payment-waiting-actions"', $html);
         $this->assertStringContainsString('>Reopen PayPal</a>', $html);
+        $this->assertStringContainsString('ainchors-paypal-handoff-ready', $html);
+        $this->assertStringContainsString('ainchors-paypal-handoff-invoice', $html);
         $this->assertStringNotContainsString('>Reopen PayPal Payment</a>', $html);
+        $this->assertStringNotContainsString('window.open(', $html);
     }
 
     private function enablePayPal(): void
