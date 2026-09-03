@@ -5,10 +5,13 @@ namespace Tests\Feature;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Commerce\Gateways\PayPalGateway;
 use App\Services\Commerce\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class PayPalWaitingExperienceTest extends TestCase
@@ -21,7 +24,7 @@ class PayPalWaitingExperienceTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_waiting_page_keeps_ainchors_tab_and_controls_one_named_paypal_window(): void
+    public function test_waiting_page_keeps_ainchors_tab_and_automatically_guides_to_one_named_paypal_window(): void
     {
         $order = new Order(['order_number' => 'AIN-PAYPAL-WAITING-TEST']);
         $invoiceUrl = 'https://www.sandbox.paypal.com/invoice/p/#INV2-WAITING-TEST';
@@ -29,9 +32,11 @@ class PayPalWaitingExperienceTest extends TestCase
         $html = view('checkout.paypal-waiting', compact('order', 'invoiceUrl'))->render();
 
         $this->assertStringContainsString('data-paypal-window-name="ainchors-paypal-payment"', $html);
-        $this->assertStringContainsString('Open PayPal Payment', $html);
+        $this->assertStringContainsString('Reopen PayPal Payment', $html);
         $this->assertStringContainsString('Cancel Payment', $html);
         $this->assertStringContainsString('window.open(invoiceUrl, providerWindowName', $html);
+        $this->assertStringContainsString("window.addEventListener('pageshow'", $html);
+        $this->assertStringContainsString('openPaymentWindow();', $html);
         $this->assertStringContainsString('The PayPal payment window was closed.', $html);
         $this->assertStringContainsString(route('payments.cancel', ['provider' => 'paypal', 'order' => $order]), $html);
         $this->assertStringNotContainsString('window.location.assign(invoiceUrl)', $html);
@@ -66,6 +71,126 @@ class PayPalWaitingExperienceTest extends TestCase
         $this->assertStringContainsString("if (this.provider !== 'paypal') return;", $html);
         $this->assertStringContainsString("window.open(\n                          '',\n                          'ainchors-paypal-payment'", $html);
         $this->assertStringContainsString('Preparing secure PayPal payment…', $html);
+    }
+
+    public function test_paypal_status_actively_verifies_a_paid_invoice_when_the_webhook_is_delayed(): void
+    {
+        $this->enablePayPal();
+        Mail::fake();
+        $invoiceId = 'INV2-ACTIVE-VERIFY';
+        [$user, $order] = $this->pendingPayPalOrder($invoiceId);
+
+        Http::fake(function (ClientRequest $request) use ($invoiceId, $order) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'paypal-token', 'expires_in' => 3600], 200);
+            }
+
+            if ($request->method() === 'GET' && str_ends_with($request->url(), '/'.$invoiceId)) {
+                return Http::response($this->paidInvoicePayload($order, $invoiceId), 200);
+            }
+
+            return Http::response([], 500);
+        });
+
+        $this->actingAs($user)
+            ->get(route('payments.paypal.status', $order))
+            ->assertOk()
+            ->assertJson([
+                'state' => 'completed',
+                'redirect_url' => route('checkout.success', $order),
+            ]);
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => $order->id,
+            'provider' => 'paypal',
+            'provider_transaction_id' => 'PAYPAL-ACTIVE-VERIFY',
+            'status' => 'paid',
+        ]);
+        $this->assertDatabaseHas('external_invoices', [
+            'order_id' => $order->id,
+            'provider' => 'paypal',
+            'external_reference' => $invoiceId,
+            'status' => 'paid',
+        ]);
+        $this->assertDatabaseHas('enrollments', [
+            'user_id' => $user->id,
+            'product_id' => $order->items->firstOrFail()->product_id,
+            'status' => 'active',
+        ]);
+        Http::assertSent(fn (ClientRequest $request): bool =>
+            $request->method() === 'GET' && str_ends_with($request->url(), '/'.$invoiceId)
+        );
+    }
+
+    public function test_paypal_oauth_token_is_reused_during_repeated_provider_checks(): void
+    {
+        $this->enablePayPal();
+        Cache::flush();
+        $invoiceId = 'INV2-TOKEN-CACHE';
+
+        Http::fake(function (ClientRequest $request) use ($invoiceId) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'paypal-token', 'expires_in' => 3600], 200);
+            }
+
+            if ($request->method() === 'GET' && str_ends_with($request->url(), '/'.$invoiceId)) {
+                return Http::response(['id' => $invoiceId, 'status' => 'UNPAID'], 200);
+            }
+
+            return Http::response([], 500);
+        });
+
+        $gateway = app(PayPalGateway::class);
+        $gateway->retrieveInvoice($invoiceId);
+        $gateway->retrieveInvoice($invoiceId);
+
+        $oauthCalls = collect(Http::recorded())->filter(
+            fn (array $record): bool => str_ends_with($record[0]->url(), '/v1/oauth2/token')
+        )->count();
+
+        $this->assertSame(1, $oauthCalls);
+    }
+
+    public function test_final_payment_pages_stay_put_and_distinguish_failed_from_cancelled(): void
+    {
+        $this->enablePayPal();
+        [$user, $order] = $this->pendingPayPalOrder('INV2-FINAL-PAGES');
+        $payment = $order->payments->firstOrFail();
+        $invoice = $order->externalInvoices->firstOrFail();
+
+        $order->update(['status' => 'completed', 'completed_at' => now()]);
+        $payment->update([
+            'provider_transaction_id' => 'PAYPAL-FINAL-PAGES',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        $invoice->update(['status' => 'paid']);
+
+        $success = $this->actingAs($user)->get(route('checkout.success', $order))->assertOk();
+        $success->assertSee('Payment Successful');
+        $success->assertDontSee('Redirecting in');
+        $success->assertDontSee('data-success-redirect', false);
+        $success->assertDontSee('window.location.assign', false);
+
+        $order->update(['status' => 'cancelled', 'completed_at' => null]);
+        $payment->update(['status' => 'failed', 'paid_at' => null]);
+        $invoice->update(['status' => 'void']);
+
+        $this->actingAs($user)
+            ->withSession(['payment_failure_context' => ['state' => 'cancelled', 'provider' => 'paypal']])
+            ->get(route('checkout.failed', $order))
+            ->assertOk()
+            ->assertSee('Payment Cancelled')
+            ->assertDontSee('Payment Unsuccessful');
+
+        $order->update(['status' => 'failed']);
+        $this->actingAs($user)
+            ->withSession(['payment_failure_context' => ['state' => 'failed', 'provider' => 'paypal']])
+            ->get(route('checkout.failed', $order))
+            ->assertOk()
+            ->assertSee('Payment Failed')
+            ->assertDontSee('Payment Unsuccessful');
     }
 
     public function test_paypal_cancel_cancels_the_provider_invoice_before_local_order_cancellation(): void
@@ -185,6 +310,35 @@ class PayPalWaitingExperienceTest extends TestCase
         ]);
 
         return [$user, $order->fresh(['items.product', 'payments', 'externalInvoices'])];
+    }
+
+    /** @return array<string, mixed> */
+    private function paidInvoicePayload(Order $order, string $invoiceId): array
+    {
+        return [
+            'id' => $invoiceId,
+            'status' => 'PAID',
+            'detail' => [
+                'invoice_number' => 'PP-ACTIVE-VERIFY',
+                'reference' => $order->order_number,
+                'currency_code' => 'USD',
+                'metadata' => [
+                    'recipient_view_url' => 'https://www.sandbox.paypal.com/invoice/p/#'.$invoiceId,
+                ],
+            ],
+            'amount' => ['value' => '19.00', 'currency_code' => 'USD'],
+            'due_amount' => ['value' => '0.00', 'currency_code' => 'USD'],
+            'payments' => [
+                'paid_amount' => ['value' => '19.00', 'currency_code' => 'USD'],
+                'transactions' => [[
+                    'type' => 'PAYPAL',
+                    'payment_id' => 'PAYPAL-ACTIVE-VERIFY',
+                    'method' => 'PAYPAL',
+                    'transaction_status' => 'SUCCESS',
+                    'amount' => ['value' => '19.00', 'currency_code' => 'USD'],
+                ]],
+            ],
+        ];
     }
 
     private function enablePayPal(): void
