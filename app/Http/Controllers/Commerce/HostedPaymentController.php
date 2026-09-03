@@ -162,7 +162,42 @@ class HostedPaymentController extends Controller
             ]);
         }
 
+        $this->activelyVerifyPendingPayPalInvoice($order);
+        $order->refresh()->loadMissing('payments');
+
+        if ($this->paypalPaymentIsComplete($order)) {
+            return response()->json([
+                'state' => 'completed',
+                'redirect_url' => route('checkout.success', $order),
+            ]);
+        }
+
         return response()->json(['state' => 'pending']);
+    }
+
+    private function activelyVerifyPendingPayPalInvoice(Order $order): void
+    {
+        $payment = $order->payments
+            ->where('provider', 'paypal')
+            ->whereIn('status', ['pending', 'processing'])
+            ->sortByDesc('id')
+            ->first();
+        $invoiceId = (string) data_get($payment?->provider_data, 'paypal_invoice_id', '');
+
+        if (! str_starts_with($invoiceId, 'INV2-')) {
+            return;
+        }
+
+        try {
+            $invoice = $this->paypal->retrieveInvoice($invoiceId);
+            if (strtoupper((string) ($invoice['status'] ?? '')) !== 'PAID') {
+                return;
+            }
+
+            $this->hostedPayments->completePayPalInvoiceWebhook($invoiceId);
+        } catch (RuntimeException $exception) {
+            report($exception);
+        }
     }
 
     private function paypalPaymentIsComplete(Order $order): bool
