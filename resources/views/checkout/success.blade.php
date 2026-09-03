@@ -8,7 +8,7 @@
 
 @section('content')
 <section class="success-section">
-    <div class="success-card success-card-compact">
+    <div class="success-card payment-state-card">
         <div class="success-icon">✓</div>
         <span class="eyebrow">Payment complete</span>
         <h1>Payment Successful</h1>
@@ -22,15 +22,15 @@
             <p>Your service order is confirmed. The AINCHORS team can now follow up from the recorded order.</p>
         @endif
         <div class="transaction-reference"><span>Transaction Reference</span><strong>{{ $payment?->provider_transaction_id }}</strong></div>
-        <div class="success-actions">
-            @if ($product->isCourse())<a class="success-action-button" href="{{ route('learn.show', $product) }}">Access Course</a>@endif
+        <div class="success-actions payment-state-actions">
+            @if ($product->isCourse())<a class="payment-state-button" href="{{ route('learn.show', $product) }}">Access Course</a>@endif
             @if ($product->isCourse() || $product->isPackage())
-                <a class="success-action-button" href="{{ route('my-courses') }}">{{ $product->isPackage() ? 'Go to My Courses' : 'My Courses' }}</a>
+                <a class="payment-state-button" href="{{ route('my-courses') }}">{{ $product->isPackage() ? 'Go to My Courses' : 'My Courses' }}</a>
             @else
-                <a class="success-action-button" href="{{ route('purchase-history') }}">Purchase History</a>
+                <a class="payment-state-button" href="{{ route('purchase-history') }}">Purchase History</a>
             @endif
             @if ($invoice)
-                <a class="success-action-button" href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer">View Receipt</a>
+                <a class="payment-state-button" href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer">View Receipt</a>
             @endif
         </div>
         @if (! $invoice && $payment?->provider === 'stripe')
