@@ -9,7 +9,6 @@ use App\Services\Commerce\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\ViewErrorBag;
 use Tests\TestCase;
 
 class PayPalWaitingExperienceTest extends TestCase
@@ -40,16 +39,18 @@ class PayPalWaitingExperienceTest extends TestCase
 
     public function test_checkout_preopens_named_paypal_window_from_the_submit_gesture(): void
     {
-        config(['commerce.payment.environment' => 'sandbox']);
-        $this->be(User::factory()->make([
+        $this->enablePayPal();
+        $user = User::factory()->create([
             'full_name' => 'PayPal Buyer',
             'email' => 'buyer@example.test',
-        ]));
-        $product = new Product([
-            'type' => 'course',
+        ]);
+        $product = Product::query()->create([
+            'type' => 'service',
             'sku' => 'PAYPAL-WINDOW-TEST',
             'name' => 'PayPal Window Test',
             'slug' => 'paypal-window-test',
+            'short_description' => 'PayPal window checkout test.',
+            'description' => 'PayPal window checkout test.',
             'price' => 19,
             'currency' => 'USD',
             'billing_type' => 'one_time',
@@ -57,13 +58,10 @@ class PayPalWaitingExperienceTest extends TestCase
             'metadata' => [],
         ]);
 
-        $html = view('checkout.show', [
-            'product' => $product,
-            'paymentDriver' => 'hosted',
-            'availableProviders' => ['stripe', 'paypal'],
-            'token' => 'paypal-window-token',
-            'errors' => new ViewErrorBag(),
-        ])->render();
+        $response = $this->actingAs($user)
+            ->get(route('checkout.show', $product))
+            ->assertOk();
+        $html = (string) $response->getContent();
 
         $this->assertStringContainsString("if (this.provider !== 'paypal') return;", $html);
         $this->assertStringContainsString("window.open(\n                          '',\n                          'ainchors-paypal-payment'", $html);
