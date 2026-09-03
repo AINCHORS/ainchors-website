@@ -109,9 +109,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/purchase-history', PurchaseHistoryController::class)->name('purchase-history');
     Route::get('/purchase-history/invoices/{externalInvoice}', ExternalInvoiceRedirectController::class)->name('purchase-history.invoice');
     Route::get('/checkouts/{product:slug}', [CheckoutController::class, 'show'])->name('checkout.show');
+    Route::get('/checkouts/{product:slug}/paypal/waiting-target', [CheckoutController::class, 'paypalWaitingTarget'])->name('checkout.paypal.waiting-target');
     Route::post('/checkouts/{product:slug}', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('/payments/stripe/{order:order_number}/return', [HostedPaymentController::class, 'stripeReturn'])->name('payments.stripe.return');
-    Route::get('/payments/paypal/handoff', [HostedPaymentController::class, 'paypalHandoff'])->name('payments.paypal.handoff');
     Route::get('/payments/paypal/{order:order_number}/waiting', [HostedPaymentController::class, 'paypalWaiting'])->name('payments.paypal.waiting');
     Route::get('/payments/paypal/{order:order_number}/waiting/status', [HostedPaymentController::class, 'paypalStatus'])->name('payments.paypal.status');
     Route::get('/payments/{provider}/{order:order_number}/cancel', [HostedPaymentController::class, 'cancel'])->name('payments.cancel');
@@ -147,7 +147,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::delete('/products/{product}/package-courses/{course}', [AdminPackageMembershipController::class, 'destroy'])->name('package-members.destroy');
 
     Route::get('/course-content', [AdminCourseContentController::class, 'index'])->name('course-content.index');
-    Route::get('/course-content/create', [AdminCourseContentController::class, 'create'])->name('course-content.create');
     Route::post('/course-content', [AdminCourseContentController::class, 'store'])->name('course-content.store');
     Route::get('/course-content/{courseContent}/edit', [AdminCourseContentController::class, 'edit'])->name('course-content.edit');
     Route::get('/course-content/{courseContent}/video-preview', [AdminCourseContentController::class, 'videoPreview'])->name('course-content.video-preview');
