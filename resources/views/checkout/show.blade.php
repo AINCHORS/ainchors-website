@@ -25,19 +25,17 @@
                       this.submitting = true;
                       if (this.provider !== 'paypal') return;
 
-                      const paymentWindow = window.open(
-                          '',
-                          'ainchors-paypal-payment',
-                          'popup=yes,width=560,height=760,resizable=yes,scrollbars=yes'
+                      const paymentTab = window.open(
+                          @js(route('payments.paypal.handoff')),
+                          'ainchors-paypal-payment'
                       );
 
-                      if (!paymentWindow) return;
+                      if (!paymentTab) return;
 
                       try {
-                          paymentWindow.document.title = 'PayPal Payment';
-                          paymentWindow.document.body.textContent = 'Preparing secure PayPal payment…';
+                          paymentTab.focus();
                       } catch (_) {
-                          // The PayPal waiting page will reuse this named window.
+                          // The AINCHORS handoff tab will continue to PayPal when ready.
                       }
                   },
               }"
