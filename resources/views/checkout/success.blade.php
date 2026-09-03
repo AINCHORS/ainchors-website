@@ -11,7 +11,7 @@
     <div class="success-card payment-state-card">
         <div class="success-icon">✓</div>
         <span class="eyebrow">Payment complete</span>
-        <h1>Payment Successful</h1>
+        <h1 class="payment-result-title">Payment Successful</h1>
         <h2>{{ $item->product_name }}</h2>
         <p class="success-price">{{ $order->currency }} {{ number_format((float) $order->total_amount, 0) }}</p>
         @if ($product->isPackage())
@@ -40,4 +40,5 @@
         @endif
     </div>
 </section>
+@include('checkout.partials.payment-state-styles')
 @endsection
