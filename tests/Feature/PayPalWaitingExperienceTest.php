@@ -184,7 +184,16 @@ class PayPalWaitingExperienceTest extends TestCase
             ->assertSee('Payment Cancelled')
             ->assertDontSee('Payment Unsuccessful');
 
-        $order->update(['status' => 'failed']);
+        $order->update(['status' => 'awaiting_payment']);
+
+        $this->actingAs($user)
+            ->get(route('payments.paypal.status', $order))
+            ->assertOk()
+            ->assertJson([
+                'state' => 'failed',
+                'redirect_url' => route('checkout.failed', $order),
+            ]);
+
         $this->actingAs($user)
             ->withSession(['payment_failure_context' => ['state' => 'failed', 'provider' => 'paypal']])
             ->get(route('checkout.failed', $order))
