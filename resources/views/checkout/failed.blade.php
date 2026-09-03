@@ -1,15 +1,16 @@
 @extends('layouts.app')
 
 @php($product = $item->product)
+@php($pageTitle = $state === 'cancelled' ? 'Payment Cancelled' : 'Payment Failed')
 
-@section('title', 'Payment Unsuccessful | AINCHORS')
+@section('title', $pageTitle.' | AINCHORS')
 
 @section('content')
 <section class="success-section">
     <div class="success-card">
         <div class="success-icon is-unsuccessful" aria-hidden="true">×</div>
-        <span class="eyebrow">Payment not completed</span>
-        <h1>Payment Unsuccessful</h1>
+        <span class="eyebrow">{{ $state === 'cancelled' ? 'Payment cancelled' : 'Payment failed' }}</span>
+        <h1>{{ $pageTitle }}</h1>
         <h2>{{ $item->product_name }}</h2>
 
         @if ($state === 'cancelled')
