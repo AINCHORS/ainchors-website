@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Commerce;
 
 use App\Exceptions\AlreadyOwnedException;
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\Product;
 use App\Services\Commerce\CheckoutService;
 use App\Services\Commerce\CoursePurchaseEligibilityService;
 use App\Services\Commerce\HostedPaymentService;
 use App\Services\Courses\CourseAccessService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -99,6 +101,62 @@ class CheckoutController extends Controller
         return redirect()->route('checkout.success', $order);
     }
 
+    public function paypalWaitingTarget(Request $request, Product $product): JsonResponse
+    {
+        $checkoutToken = (string) $request->query('checkout_token', '');
+        $sessionToken = (string) $request->session()->get('checkout_tokens.'.$product->id, '');
+        abort_unless(
+            $checkoutToken !== ''
+            && $sessionToken !== ''
+            && hash_equals($sessionToken, $checkoutToken),
+            419,
+        );
+
+        $order = Order::query()
+            ->where('user_id', $request->user()->id)
+            ->where('idempotency_key', $checkoutToken)
+            ->whereHas('items', fn ($query) => $query->where('product_id', $product->id))
+            ->with(['payments', 'externalInvoices'])
+            ->latest('id')
+            ->first();
+
+        if (! $order) {
+            return response()->json(['state' => 'pending']);
+        }
+
+        $paypalPayment = $order->payments
+            ->where('provider', 'paypal')
+            ->sortByDesc('id')
+            ->first();
+
+        if ($order->status === 'completed' && $paypalPayment?->status === 'paid') {
+            return response()->json([
+                'state' => 'ready',
+                'redirect_url' => route('checkout.success', $order),
+            ]);
+        }
+
+        if ($order->status === 'cancelled' || $paypalPayment?->status === 'failed') {
+            return response()->json([
+                'state' => 'ready',
+                'redirect_url' => route('checkout.failed', $order),
+            ]);
+        }
+
+        $hasPayableInvoice = $order->externalInvoices->contains(
+            fn ($invoice): bool => $invoice->provider === 'paypal' && $invoice->status === 'unpaid'
+        );
+
+        if (! $hasPayableInvoice) {
+            return response()->json(['state' => 'pending']);
+        }
+
+        return response()->json([
+            'state' => 'ready',
+            'redirect_url' => route('payments.paypal.waiting', $order),
+        ]);
+    }
+
     private function startHostedCheckout(Request $request, Product $product): RedirectResponse
     {
         $availableProviders = $this->hostedPayments->availableProviders();
@@ -135,10 +193,8 @@ class CheckoutController extends Controller
             return back()->withErrors(['payment' => $exception->getMessage()]);
         }
 
-        if ($validated['payment_provider'] === 'paypal') {
-            return $hosted['order']->status === 'completed'
-                ? redirect()->route('checkout.success', $hosted['order'])
-                : redirect()->route('payments.paypal.waiting', $hosted['order']);
+        if ($validated['payment_provider'] === 'paypal' && $hosted['order']->status === 'completed') {
+            return redirect()->route('checkout.success', $hosted['order']);
         }
 
         return redirect()->away($hosted['redirect_url']);
