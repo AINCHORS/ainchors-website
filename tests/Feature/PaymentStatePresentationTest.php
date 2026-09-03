@@ -35,6 +35,23 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertStringContainsString('.payment-state-actions { grid-template-columns: 1fr; }', $css);
     }
 
+    public function test_terminal_payment_titles_stay_on_one_line_without_forcing_the_waiting_title(): void
+    {
+        $success = file_get_contents(resource_path('views/checkout/success.blade.php'));
+        $failed = file_get_contents(resource_path('views/checkout/failed.blade.php'));
+        $waiting = file_get_contents(resource_path('views/checkout/paypal-waiting.blade.php'));
+        $css = file_get_contents(resource_path('css/app.css'));
+
+        $this->assertIsString($success);
+        $this->assertIsString($failed);
+        $this->assertIsString($waiting);
+        $this->assertIsString($css);
+        $this->assertStringContainsString('<h1 class="payment-result-title">Payment Successful</h1>', $success);
+        $this->assertStringContainsString('<h1 class="payment-result-title">{{ $pageTitle }}</h1>', $failed);
+        $this->assertStringNotContainsString('payment-result-title', $waiting);
+        $this->assertStringContainsString('.payment-result-title { font-size: clamp(30px,4vw,42px); white-space: nowrap;', $css);
+    }
+
     public function test_failed_and_cancelled_states_do_not_mix_primary_and_secondary_button_variants(): void
     {
         $failed = file_get_contents(resource_path('views/checkout/failed.blade.php'));
