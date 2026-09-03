@@ -83,6 +83,36 @@ class AdminPlatformTest extends TestCase
                 && (float) $rows->first()->total_amount === 38.0);
     }
 
+    public function test_dashboard_only_reports_final_commerce_records(): void
+    {
+        $admin = $this->admin();
+        $learner = User::factory()->create();
+        $product = $this->product('final-status-service', 'Final Status Service', 'service');
+
+        $awaiting = $this->orderFor($learner, $product, 'AIN-DASHBOARD-AWAITING');
+        $awaiting->update(['status' => 'awaiting_payment']);
+        $awaiting->payments()->create([
+            'provider' => 'stripe', 'payment_environment' => 'sandbox', 'amount' => 19,
+            'currency' => 'USD', 'status' => 'pending',
+        ]);
+
+        $failed = $this->orderFor($learner, $product, 'AIN-DASHBOARD-FAILED');
+        $failed->update(['status' => 'awaiting_payment']);
+        $failed->payments()->create([
+            'provider' => 'stripe', 'payment_environment' => 'sandbox', 'amount' => 19,
+            'currency' => 'USD', 'status' => 'failed',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.dashboard'));
+
+        $response->assertOk()
+            ->assertDontSee('Awaiting payment')
+            ->assertDontSee('Pending payments')
+            ->assertDontSee($awaiting->order_number)
+            ->assertSee($failed->order_number)
+            ->assertSee('Failed');
+    }
+
     public function test_secure_admin_provisioning_hashes_a_runtime_password_and_never_echoes_it(): void
     {
         $email = 'info@ainchors.com';

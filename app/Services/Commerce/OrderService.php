@@ -15,6 +15,10 @@ class OrderService
     public function historyFor(User $user): Collection
     {
         return $user->orders()
+            ->where(function ($query): void {
+                $query->whereIn('status', ['completed', 'cancelled'])
+                    ->orWhereHas('payments', fn ($payments) => $payments->where('status', 'failed'));
+            })
             ->with([
                 'items' => fn ($query) => $query->select([
                     'id', 'order_id', 'product_id', 'product_name', 'quantity',

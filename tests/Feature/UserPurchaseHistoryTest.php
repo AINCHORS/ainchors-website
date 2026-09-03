@@ -22,7 +22,7 @@ class UserPurchaseHistoryTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_history_is_user_scoped_uses_snapshots_and_shows_paid_awaiting_and_failed_states(): void
+    public function test_history_is_user_scoped_uses_snapshots_and_only_shows_final_states(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -64,26 +64,28 @@ class UserPurchaseHistoryTest extends TestCase
             ->assertSee('data-carousel-pagination', false)
             ->assertSee('data-carousel-status', false)
             ->assertSee('data-purchase-order-reference', false)
+            ->assertSee('line-clamp-2', false)
+            ->assertSee('data-purchase-no-action', false)
+            ->assertSee('whitespace-nowrap', false)
             ->assertSee('data-purchase-product', false)
             ->assertSee('min-h-[2.75rem]', false)
             ->assertSee('min-h-[4.5rem]', false)
             ->assertSee($paidOrder->order_number)
-            ->assertSee($awaitingOrder->order_number)
             ->assertSee($failedOrder->order_number)
             ->assertSee('Purchased Course Snapshot')
-            ->assertSee('Awaiting Course Snapshot')
             ->assertSee('Failed Course Snapshot')
-            ->assertSee('Awaiting payment')
-            ->assertSee('Pending')
+            ->assertDontSee($awaitingOrder->order_number)
+            ->assertDontSee('Awaiting Course Snapshot')
+            ->assertDontSee('Awaiting payment')
             ->assertSee('Failed')
             ->assertSee('Stripe')
-            ->assertSee(route('learn.show', $paidCourse), false)
+            ->assertDontSee(route('learn.show', $paidCourse), false)
             ->assertDontSee('Renamed Product Must Not Replace Snapshot')
             ->assertDontSee($otherOrder->order_number)
             ->assertDontSee('Other User Secret Snapshot')
             ->assertDontSee('DO-NOT-EXPOSE-PROVIDER-DATA');
 
-        $this->assertSame(1, substr_count($response->getContent(), 'Access Course'));
+        $this->assertSame(0, substr_count($response->getContent(), 'Access Course'));
     }
 
     public function test_failed_payment_grants_no_course_access(): void
@@ -130,6 +132,11 @@ class UserPurchaseHistoryTest extends TestCase
         $this->actingAs($owner)->get(route('purchase-history'))
             ->assertOk()
             ->assertSee('Invoice')
+            ->assertSee('data-purchase-receipt', false)
+            ->assertSee('data-purchase-receipt-desktop', false)
+            ->assertSee('whitespace-nowrap', false)
+            ->assertSee('hover:bg-ainchors-green-hero', false)
+            ->assertSee('hover:text-ainchors-navy', false)
             ->assertSee(route('purchase-history.invoice', $invoice), false)
             ->assertDontSee('https://billing.example.test/customer/invoice-fixture-1');
         $this->actingAs($owner)->get(route('purchase-history.invoice', $invoice))

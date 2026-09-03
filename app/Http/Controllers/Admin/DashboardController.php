@@ -25,14 +25,20 @@ class DashboardController extends Controller
             'active_products' => Product::query()->where('status', 'active')->count(),
             'active_courses' => Product::query()->where('type', 'course')->where('status', 'active')->count(),
             'active_packages' => Product::query()->where('type', 'course_package')->where('status', 'active')->count(),
-            'total_orders' => Order::query()->count(),
-            'awaiting_payment_orders' => Order::query()->whereIn('status', ['pending', 'awaiting_payment'])->count(),
+            'total_orders' => Order::query()->where(function ($query): void {
+                $query->whereIn('status', ['completed', 'cancelled'])
+                    ->orWhereHas('payments', fn ($payments) => $payments->where('status', 'failed'));
+            })->count(),
             'completed_orders' => Order::query()->where('status', 'completed')->count(),
+            'cancelled_orders' => Order::query()->where('status', 'cancelled')->count(),
+            'failed_orders' => Order::query()
+                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->whereHas('payments', fn ($query) => $query->where('status', 'failed'))
+                ->count(),
             'paid_payments' => $paidPayments,
             // Keep the original metric key during Phase 1 so existing admin
             // regression tests and any internal references remain compatible.
             'completed_payments' => $paidPayments,
-            'pending_payments' => Payment::query()->where('payment_environment', 'live')->whereIn('status', ['pending', 'processing'])->count(),
             'failed_payments' => Payment::query()->where('payment_environment', 'live')->where('status', 'failed')->count(),
             'test_payments' => Payment::query()->where(function ($query): void {
                 $query->where('provider', 'demo')->orWhere('payment_environment', 'test');
@@ -58,6 +64,10 @@ class DashboardController extends Controller
             ->get();
 
         $recentOrders = Order::query()
+            ->where(function ($query): void {
+                $query->whereIn('status', ['completed', 'cancelled'])
+                    ->orWhereHas('payments', fn ($payments) => $payments->where('status', 'failed'));
+            })
             ->select([
                 'id', 'order_number', 'user_id', 'status', 'currency',
                 'total_amount', 'placed_at', 'created_at',
@@ -69,6 +79,7 @@ class DashboardController extends Controller
             ->get();
 
         $recentPayments = Payment::query()
+            ->whereIn('status', ['paid', 'failed'])
             ->select([
                 'id', 'order_id', 'provider', 'payment_environment', 'provider_transaction_id', 'amount',
                 'currency', 'status', 'paid_at', 'created_at',

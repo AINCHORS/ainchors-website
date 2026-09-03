@@ -22,10 +22,10 @@
 
         $commerceCards = [
             ['label' => 'Orders', 'value' => data_get($metrics, 'total_orders', 0), 'detail' => 'All recorded orders'],
-            ['label' => 'Awaiting payment', 'value' => data_get($metrics, 'awaiting_payment_orders', 0), 'detail' => 'Pending / awaiting orders'],
             ['label' => 'Completed orders', 'value' => data_get($metrics, 'completed_orders', 0), 'detail' => 'Completed order records'],
+            ['label' => 'Cancelled orders', 'value' => data_get($metrics, 'cancelled_orders', 0), 'detail' => 'Cancelled order records'],
+            ['label' => 'Failed orders', 'value' => data_get($metrics, 'failed_orders', 0), 'detail' => 'Failed order records'],
             ['label' => 'Paid payments', 'value' => data_get($metrics, 'paid_payments', 0), 'detail' => 'Verified live payments'],
-            ['label' => 'Pending payments', 'value' => data_get($metrics, 'pending_payments', 0), 'detail' => 'Pending or processing'],
             ['label' => 'Failed payments', 'value' => data_get($metrics, 'failed_payments', 0), 'detail' => 'Failed payment records'],
             ['label' => 'Demo / test', 'value' => data_get($metrics, 'test_payments', 0), 'detail' => 'Excluded from totals'],
             ['label' => 'Live provider records', 'value' => data_get($metrics, 'live_provider_payments', 0), 'detail' => 'Environment = live'],
@@ -133,7 +133,8 @@
             <div class="flex items-center justify-between gap-3"><h2 class="font-heading text-xl font-bold text-ainchors-navy">Recent orders</h2><a href="{{ route('admin.orders.index') }}" class="text-sm font-semibold text-ainchors-green hover:text-ainchors-navy">View all</a></div>
             <div class="mt-4 divide-y divide-ainchors-navy/8">
                 @forelse ($recentOrders as $order)
-                    <a href="{{ route('admin.orders.show', $order) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $order->order_number }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $order->user?->full_name ?? 'Customer unavailable' }}</p></div><div class="text-right"><p class="font-semibold text-ainchors-navy">{{ $order->currency }} {{ number_format((float) $order->total_amount, 2) }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ str($order->status)->replace('_', ' ')->headline() }}</p></div></a>
+                    @php($displayStatus = $order->status === 'completed' ? 'Completed' : ($order->status === 'cancelled' ? 'Cancelled' : 'Failed'))
+                    <a href="{{ route('admin.orders.show', $order) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $order->order_number }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $order->user?->full_name ?? 'Customer unavailable' }}</p></div><div class="text-right"><p class="font-semibold text-ainchors-navy">{{ $order->currency }} {{ number_format((float) $order->total_amount, 2) }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $displayStatus }}</p></div></a>
                 @empty
                     <p class="py-8 text-center text-sm text-ainchors-grey-dark">No orders recorded.</p>
                 @endforelse
@@ -144,7 +145,8 @@
             <div class="flex items-center justify-between gap-3"><h2 class="font-heading text-xl font-bold text-ainchors-navy">Recent payments</h2><a href="{{ route('admin.payments.index') }}" class="text-sm font-semibold text-ainchors-green hover:text-ainchors-navy">View all records</a></div>
             <div class="mt-4 divide-y divide-ainchors-navy/8">
                 @forelse ($recentPayments as $payment)
-                    <a href="{{ route('admin.payments.show', $payment) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $payment->provider }} · {{ $payment->order?->order_number ?? 'Order unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $payment->order?->user?->full_name ?? 'Customer unavailable' }}</p></div><div class="text-right"><p class="font-semibold text-ainchors-navy">{{ $payment->currency }} {{ number_format((float) $payment->amount, 2) }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ str($payment->status)->headline() }} · {{ str($payment->payment_environment ?? 'unknown')->headline() }}</p></div></a>
+                    @php($displayStatus = $payment->order?->status === 'completed' ? 'Completed' : ($payment->order?->status === 'cancelled' ? 'Cancelled' : 'Failed'))
+                    <a href="{{ route('admin.payments.show', $payment) }}" class="flex items-center justify-between gap-4 py-3 text-sm hover:bg-slate-50"><div><p class="font-semibold text-ainchors-navy">{{ $payment->provider }} · {{ $payment->order?->order_number ?? 'Order unavailable' }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $payment->order?->user?->full_name ?? 'Customer unavailable' }}</p></div><div class="text-right"><p class="font-semibold text-ainchors-navy">{{ $payment->currency }} {{ number_format((float) $payment->amount, 2) }}</p><p class="mt-1 text-xs text-ainchors-grey-dark">{{ $displayStatus }} · {{ str($payment->payment_environment ?? 'unknown')->headline() }}</p></div></a>
                 @empty
                     <p class="py-8 text-center text-sm text-ainchors-grey-dark">No payment records recorded.</p>
                 @endforelse

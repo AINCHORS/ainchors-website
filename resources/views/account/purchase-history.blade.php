@@ -44,7 +44,7 @@
                             @php($payment = $order->payments->firstWhere('status', 'paid') ?? $order->payments->first())
                             @php($invoice = $customerInvoices->get($order->id))
                             @php($isCompletedPackage = $order->status === 'completed' && $order->items->contains(fn ($item) => data_get($item->metadata, 'product_type') === 'course_package'))
-                            @php($hasCourseAction = $order->items->contains(fn ($item) => $activeEnrollments->has($item->product_id)))
+                            @php($displayStatus = $order->status === 'completed' ? 'Completed' : ($order->status === 'cancelled' ? 'Cancelled' : 'Failed'))
                             <tr class="align-top text-ainchors-grey-dark">
                                 <td class="whitespace-nowrap px-5 py-4 font-semibold text-ainchors-navy">{{ $order->order_number }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $order->placed_at?->format('j M Y') ?? $order->created_at?->format('j M Y') ?? '—' }}</td>
@@ -56,7 +56,7 @@
                                     </ul>
                                 </td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $order->currency }} {{ number_format((float) $order->total_amount, 2) }}</td>
-                                <td class="whitespace-nowrap px-5 py-4">{{ ucfirst(str_replace('_', ' ', $order->status)) }}</td>
+                                <td class="whitespace-nowrap px-5 py-4">{{ $displayStatus }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">{{ $payment ? ucfirst(str_replace('_', ' ', $payment->status)) : '—' }}</td>
                                 <td class="px-5 py-4">
                                     <span class="whitespace-nowrap">{{ $payment ? ucfirst($payment->provider) : '—' }}</span>
@@ -66,15 +66,6 @@
                                 </td>
                                 <td class="px-5 py-4">
                                     <div class="flex flex-wrap gap-2">
-                                        @foreach ($order->items as $item)
-                                            @php($enrollment = $activeEnrollments->get($item->product_id))
-                                            @if ($enrollment?->product)
-                                                <a href="{{ route('learn.show', $enrollment->product) }}" class="rounded-ainchors-button bg-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-white transition hover:bg-ainchors-navy">
-                                                    Access Course
-                                                </a>
-                                            @endif
-                                        @endforeach
-
                                         @if ($isCompletedPackage)
                                             <a href="{{ route('my-courses') }}" class="rounded-ainchors-button bg-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-white transition hover:bg-ainchors-green-dark">
                                                 My Courses
@@ -82,13 +73,13 @@
                                         @endif
 
                                         @if ($invoice)
-                                            <a href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer" class="rounded-ainchors-button border border-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">
+                                            <a data-purchase-receipt data-purchase-receipt-desktop href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer" class="whitespace-nowrap rounded-ainchors-button bg-ainchors-green px-3 py-2 text-xs font-semibold text-ainchors-white transition hover:bg-ainchors-green-hero hover:text-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">
                                                 View Receipt
                                             </a>
                                         @endif
 
-                                        @if (! $invoice && ! $hasCourseAction && ! $isCompletedPackage)
-                                            <span class="py-2 text-xs text-ainchors-grey-light">No action available</span>
+                                        @if (! $invoice && ! $isCompletedPackage)
+                                            <span data-purchase-no-action class="whitespace-nowrap py-2 text-xs text-ainchors-grey-light">No action available</span>
                                         @endif
                                     </div>
                                 </td>
@@ -104,15 +95,16 @@
                         @foreach ($orders as $order)
                             @php($payment = $order->payments->firstWhere('status', 'paid') ?? $order->payments->first())
                             @php($invoice = $customerInvoices->get($order->id))
+                            @php($displayStatus = $order->status === 'completed' ? 'Completed' : ($order->status === 'cancelled' ? 'Cancelled' : 'Failed'))
                             <div class="course-carousel-item" data-carousel-card>
                     <article class="flex min-w-0 flex-col rounded-ainchors-card border border-ainchors-grey-light/25 bg-ainchors-white p-5 shadow-lg shadow-ainchors-navy/5">
                         <div class="flex items-start justify-between gap-3 border-b border-ainchors-grey-light/20 pb-4">
                             <div class="min-w-0">
                                 <p class="font-sans text-xs font-bold uppercase tracking-[0.12em] text-ainchors-green">Order</p>
-                                <h2 data-purchase-order-reference class="mt-1 min-h-[2.75rem] break-all font-heading text-base font-bold leading-snug text-ainchors-navy">{{ $order->order_number }}</h2>
+                                <h2 data-purchase-order-reference title="{{ $order->order_number }}" class="mt-1 min-h-[2.75rem] break-all line-clamp-2 font-heading text-base font-bold leading-snug text-ainchors-navy">{{ $order->order_number }}</h2>
                             </div>
                             <span class="shrink-0 rounded-full bg-ainchors-green-hero px-3 py-1 font-sans text-xs font-semibold text-ainchors-navy">
-                                {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+                                {{ $displayStatus }}
                             </span>
                         </div>
 
@@ -155,11 +147,11 @@
 
                         <div class="mt-auto flex flex-col gap-2 border-t border-ainchors-grey-light/20 pt-4">
                             @if ($invoice)
-                                <a href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 items-center justify-center rounded-ainchors-button bg-ainchors-green px-4 py-2 text-center text-sm font-semibold text-ainchors-white transition hover:bg-ainchors-green-dark focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">
+                                <a data-purchase-receipt href="{{ route('purchase-history.invoice', $invoice) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-ainchors-button bg-ainchors-green px-4 py-2 text-center text-sm font-semibold text-ainchors-white transition hover:bg-ainchors-green-hero hover:text-ainchors-navy focus:outline-none focus:ring-2 focus:ring-ainchors-green focus:ring-offset-2">
                                     View Receipt
                                 </a>
                             @else
-                                <span class="py-2 text-center text-xs text-ainchors-grey-light">No action available</span>
+                                <span data-purchase-no-action class="whitespace-nowrap py-2 text-center text-xs text-ainchors-grey-light">No action available</span>
                             @endif
                         </div>
                     </article>
