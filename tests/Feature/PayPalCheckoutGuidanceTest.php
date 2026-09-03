@@ -18,7 +18,7 @@ class PayPalCheckoutGuidanceTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_continue_with_paypal_opens_a_branded_handoff_tab_without_popup_features(): void
+    public function test_continue_with_paypal_uses_a_normal_handoff_tab_link_without_window_open(): void
     {
         $this->enablePayPal();
         $user = User::factory()->create([
@@ -44,12 +44,13 @@ class PayPalCheckoutGuidanceTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('@click="prepareHostedPayment()"', $html);
-        $this->assertStringContainsString(route('payments.paypal.handoff'), $html);
-        $this->assertStringContainsString("'ainchors-paypal-payment'", $html);
+        $this->assertStringContainsString('href="'.route('payments.paypal.handoff').'"', $html);
+        $this->assertStringContainsString('target="ainchors-paypal-payment"', $html);
+        $this->assertStringContainsString('$refs.checkoutForm.requestSubmit($refs.checkoutSubmit)', $html);
+        $this->assertStringContainsString('Continue with PayPal', $html);
+        $this->assertStringNotContainsString('window.open(', $html);
         $this->assertStringNotContainsString('popup=yes', $html);
         $this->assertStringNotContainsString('Preparing secure PayPal payment…', $html);
-        $this->assertStringNotContainsString('@submit="prepareHostedPayment()"', $html);
     }
 
     public function test_paypal_handoff_tab_redirects_itself_after_the_waiting_page_supplies_the_invoice_url(): void
