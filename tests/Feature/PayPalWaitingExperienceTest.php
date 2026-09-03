@@ -9,6 +9,7 @@ use App\Services\Commerce\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\ViewErrorBag;
 use Tests\TestCase;
 
 class PayPalWaitingExperienceTest extends TestCase
@@ -61,6 +62,7 @@ class PayPalWaitingExperienceTest extends TestCase
             'paymentDriver' => 'hosted',
             'availableProviders' => ['stripe', 'paypal'],
             'token' => 'paypal-window-token',
+            'errors' => new ViewErrorBag(),
         ])->render();
 
         $this->assertStringContainsString("if (this.provider !== 'paypal') return;", $html);
