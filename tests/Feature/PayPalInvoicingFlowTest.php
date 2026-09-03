@@ -164,7 +164,10 @@ class PayPalInvoicingFlowTest extends TestCase
         $invoice['due_amount'] = ['currency_code' => 'USD', 'value' => '0.00'];
 
         $headers = $this->webhookHeaders();
-        $event = ['event_type' => 'INVOICING.INVOICE.PAID', 'resource' => ['id' => $invoiceId]];
+        $event = [
+            'event_type' => 'INVOICING.INVOICE.PAID',
+            'resource' => ['invoice' => ['id' => $invoiceId]],
+        ];
         $this->withHeaders($headers)->postJson(route('payments.paypal.webhook'), $event)->assertOk();
         $this->withHeaders($headers)->postJson(route('payments.paypal.webhook'), $event)->assertOk();
 
@@ -322,6 +325,40 @@ class PayPalInvoicingFlowTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('payments', 0);
         $this->assertDatabaseCount('enrollments', 0);
+    }
+
+    public function test_webhook_signature_verification_uses_the_unmodified_json_body(): void
+    {
+        $this->enablePayPal();
+
+        Http::fake(function (ClientRequest $request) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'paypal-token'], 200);
+            }
+
+            if (str_ends_with($request->url(), '/v1/notifications/verify-webhook-signature')) {
+                return Http::response(['verification_status' => 'SUCCESS'], 200);
+            }
+
+            return Http::response([], 500);
+        });
+
+        $event = [
+            'event_type' => 'TEST.EVENT',
+            'resource' => ['id' => '', 'note' => '  unchanged  ', 'settings' => (object) [], 'items' => []],
+        ];
+
+        $this->withHeaders($this->webhookHeaders())
+            ->postJson(route('payments.paypal.webhook'), $event)
+            ->assertOk();
+
+        Http::assertSent(fn (ClientRequest $request): bool =>
+            str_ends_with($request->url(), '/v1/notifications/verify-webhook-signature')
+            && data_get($request->data(), 'webhook_event.resource.id') === ''
+            && data_get($request->data(), 'webhook_event.resource.note') === '  unchanged  '
+            && data_get(json_decode($request->body()), 'webhook_event.resource.settings') instanceof \stdClass
+            && data_get(json_decode($request->body()), 'webhook_event.resource.items') === []
+        );
     }
 
     public function test_send_failure_keeps_stored_draft_and_retry_does_not_create_a_second_invoice(): void

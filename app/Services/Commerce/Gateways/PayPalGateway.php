@@ -111,7 +111,7 @@ class PayPalGateway
     }
 
     /** @param array<string, string|null> $headers */
-    public function webhookIsVerified(array $headers, array $event): bool
+    public function webhookIsVerified(array $headers, array|\stdClass $event): bool
     {
         $webhookId = (string) config('commerce.payment.paypal.webhook_id');
         $required = ['paypal-auth-algo', 'paypal-cert-url', 'paypal-transmission-id', 'paypal-transmission-sig', 'paypal-transmission-time'];
@@ -133,7 +133,16 @@ class PayPalGateway
             throw new RuntimeException('PayPal webhook verification failed.', previous: $exception);
         }
 
-        return $response->successful() && $response->json('verification_status') === 'SUCCESS';
+        $verificationStatus = (string) $response->json('verification_status');
+        if (! $response->successful() || $verificationStatus !== 'SUCCESS') {
+            throw new RuntimeException(sprintf(
+                'PayPal rejected webhook verification (HTTP %d, status %s).',
+                $response->status(),
+                $verificationStatus !== '' ? $verificationStatus : 'missing',
+            ));
+        }
+
+        return true;
     }
 
     private function client(): PendingRequest

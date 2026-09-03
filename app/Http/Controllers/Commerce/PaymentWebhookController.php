@@ -8,6 +8,7 @@ use App\Services\Commerce\Gateways\StripeGateway;
 use App\Services\Commerce\HostedPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class PaymentWebhookController extends Controller
@@ -36,7 +37,6 @@ class PaymentWebhookController extends Controller
 
     public function paypal(Request $request): JsonResponse
     {
-        $event = $request->json()->all();
         $headers = [
             'paypal-auth-algo' => $request->header('PayPal-Auth-Algo'),
             'paypal-cert-url' => $request->header('PayPal-Cert-Url'),
@@ -46,18 +46,36 @@ class PaymentWebhookController extends Controller
         ];
 
         try {
+            // Preserve empty objects and untrimmed strings in the signed provider payload.
+            $event = json_decode($request->getContent());
+            if (! $event instanceof \stdClass) {
+                throw new RuntimeException('PayPal webhook payload is not valid JSON.');
+            }
+
             if (! $this->paypal->webhookIsVerified($headers, $event)) {
                 return response()->json(['received' => false], 400);
             }
-            if (($event['event_type'] ?? null) === 'INVOICING.INVOICE.PAID') {
-                $invoiceId = (string) data_get($event, 'resource.id', '');
+            if (data_get($event, 'event_type') === 'INVOICING.INVOICE.PAID') {
+                $invoiceId = (string) data_get(
+                    $event,
+                    'resource.invoice.id',
+                    data_get($event, 'resource.id', ''),
+                );
                 if ($invoiceId === '') {
-                    $self = collect(data_get($event, 'resource.links', []))->first(
-                        fn ($link): bool => is_array($link) && ($link['rel'] ?? null) === 'self',
+                    $self = collect(data_get(
+                        $event,
+                        'resource.invoice.links',
+                        data_get($event, 'resource.links', []),
+                    ))->first(
+                        fn ($link): bool => data_get($link, 'rel') === 'self',
                     );
                     $invoiceId = basename((string) data_get($self, 'href', ''));
                 }
                 $this->hostedPayments->completePayPalInvoiceWebhook($invoiceId);
+                Log::info('PayPal paid invoice webhook processed.', [
+                    'event_id' => data_get($event, 'id'),
+                    'invoice_id' => $invoiceId,
+                ]);
             }
         } catch (RuntimeException $exception) {
             report($exception);
