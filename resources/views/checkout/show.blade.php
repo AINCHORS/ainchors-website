@@ -18,25 +18,14 @@
         @error('payment')<p class="form-error" role="alert">{{ $message }}</p>@enderror
 
         <form method="POST" action="{{ route('checkout.store', $product) }}" class="checkout-grid"
+              x-ref="checkoutForm"
               x-data="{
                   submitting: false,
                   provider: @js($availableProviders[0] ?? ''),
                   prepareHostedPayment() {
+                      if (this.submitting) return;
                       this.submitting = true;
-                      if (this.provider !== 'paypal') return;
-
-                      const paymentTab = window.open(
-                          @js(route('payments.paypal.handoff')),
-                          'ainchors-paypal-payment'
-                      );
-
-                      if (!paymentTab) return;
-
-                      try {
-                          paymentTab.focus();
-                      } catch (_) {
-                          // The AINCHORS handoff tab will continue to PayPal when ready.
-                      }
+                      window.setTimeout(() => this.$refs.checkoutForm.requestSubmit(this.$refs.checkoutSubmit), 0);
                   },
               }"
               @submit="submitting = true">
@@ -110,7 +99,22 @@
                             @endif
                         </fieldset>
 
-                        <button type="submit" class="primary-button form-button checkout-provider-cta" :disabled="submitting" @click="prepareHostedPayment()" x-text="submitting ? 'Redirecting…' : `Continue with ${provider === 'paypal' ? 'PayPal' : 'Stripe'}`">Continue with {{ str($availableProviders[0] ?? 'payment provider')->headline() }}</button>
+                        <a x-cloak
+                           x-show="provider === 'paypal'"
+                           href="{{ route('payments.paypal.handoff') }}"
+                           target="ainchors-paypal-payment"
+                           class="primary-button form-button checkout-provider-cta"
+                           :class="{ 'pointer-events-none opacity-70': submitting }"
+                           :aria-disabled="submitting.toString()"
+                           @click="prepareHostedPayment()">Continue with PayPal</a>
+
+                        <button x-show="provider !== 'paypal'"
+                                type="submit"
+                                class="primary-button form-button checkout-provider-cta"
+                                :disabled="submitting"
+                                x-text="submitting ? 'Redirecting…' : 'Continue with Stripe'">Continue with Stripe</button>
+
+                        <button x-ref="checkoutSubmit" type="submit" class="sr-only" tabindex="-1" aria-hidden="true">Continue</button>
                     @endif
                     @error('payment_provider')<p class="form-error">{{ $message }}</p>@enderror
                 @endif
