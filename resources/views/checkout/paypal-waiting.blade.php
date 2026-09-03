@@ -21,6 +21,7 @@
         </div>
     </div>
 </section>
+@include('checkout.partials.payment-state-styles')
 
 <script>
 (() => {
