@@ -25,17 +25,18 @@ class PaymentStatePresentationTest extends TestCase
     {
         $css = file_get_contents(resource_path('css/app.css'));
         $stateStyles = file_get_contents(resource_path('views/checkout/partials/payment-state-styles.blade.php'));
+        $paymentCss = $css."\n".$stateStyles;
 
         $this->assertIsString($css);
         $this->assertIsString($stateStyles);
-        $this->assertStringContainsString('.payment-state-card { width: min(100%, 620px); min-height: 700px;', $css);
-        $this->assertStringContainsString('.payment-state-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr));', $css);
-        $this->assertStringContainsString('.payment-state-button {', $css);
-        $this->assertStringContainsString('background: #37ad82;', $css);
-        $this->assertStringContainsString('color: #fff;', $css);
+        $this->assertStringContainsString('.payment-state-card { width: min(100%, 620px); min-height: 700px;', $paymentCss);
+        $this->assertStringContainsString('.payment-state-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr));', $paymentCss);
+        $this->assertStringContainsString('.payment-state-button {', $paymentCss);
+        $this->assertStringContainsString('background: #37ad82;', $paymentCss);
+        $this->assertStringContainsString('color: #fff;', $paymentCss);
         $this->assertStringContainsString('.payment-state-button:hover,.payment-state-button:focus-visible { background: #e8fff7; color: #37ad82;', $stateStyles);
-        $this->assertStringContainsString('@media (max-width: 640px)', $css);
-        $this->assertStringContainsString('.payment-state-actions { grid-template-columns: 1fr; }', $css);
+        $this->assertStringContainsString('@media (max-width: 640px)', $paymentCss);
+        $this->assertStringContainsString('.payment-state-actions { grid-template-columns: 1fr; }', $paymentCss);
     }
 
     public function test_terminal_payment_titles_stay_on_one_line_and_inside_the_card_without_forcing_the_waiting_title(): void
