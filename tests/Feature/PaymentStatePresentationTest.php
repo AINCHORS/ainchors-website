@@ -30,7 +30,7 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertStringContainsString('.payment-state-button {', $css);
         $this->assertStringContainsString('background: #37ad82;', $css);
         $this->assertStringContainsString('color: #fff;', $css);
-        $this->assertStringContainsString('.payment-state-button:hover,.payment-state-button:focus-visible { background: #2e8b70; color: #fff;', $css);
+        $this->assertStringContainsString('.payment-state-button:hover,.payment-state-button:focus-visible { background: #e8fff7; color: #37ad82;', $css);
         $this->assertStringContainsString('@media (max-width: 640px)', $css);
         $this->assertStringContainsString('.payment-state-actions { grid-template-columns: 1fr; }', $css);
     }
