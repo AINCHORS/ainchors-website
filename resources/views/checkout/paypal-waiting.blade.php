@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="success-section">
-    <div class="success-card success-card-compact payment-waiting-card"
+    <div class="success-card payment-state-card payment-waiting-card"
          data-paypal-waiting
          data-status-url="{{ route('payments.paypal.status', $order) }}">
         <span class="eyebrow">Secure PayPal payment</span>
@@ -14,31 +14,13 @@
             <p class="form-error" role="alert">{{ session('payment_cancel_error') }}</p>
         @endif
         <p class="payment-waiting-status" role="status" aria-live="polite">Waiting for verified PayPal payment confirmation…</p>
-        <div class="success-actions payment-waiting-actions">
-            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment" rel="noopener noreferrer" aria-label="Reopen PayPal Payment">Reopen PayPal</a>
-            <a data-paypal-cancel class="success-action-button" href="{{ route('payments.cancel', ['provider' => 'paypal', 'order' => $order]) }}">Cancel Payment</a>
-            <a class="success-action-button" href="{{ route('purchase-history') }}">Purchase History</a>
+        <div class="success-actions payment-state-actions">
+            <a data-paypal-open class="payment-state-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment" rel="noopener noreferrer" aria-label="Reopen PayPal Payment">Reopen PayPal</a>
+            <a data-paypal-cancel class="payment-state-button" href="{{ route('payments.cancel', ['provider' => 'paypal', 'order' => $order]) }}">Cancel Payment</a>
+            <a class="payment-state-button" href="{{ route('purchase-history') }}">Purchase History</a>
         </div>
     </div>
 </section>
-
-<style>
-.payment-waiting-actions {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
-}
-.payment-waiting-actions .success-action-button {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-}
-@media (max-width: 640px) {
-    .payment-waiting-actions {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
 
 <script>
 (() => {
