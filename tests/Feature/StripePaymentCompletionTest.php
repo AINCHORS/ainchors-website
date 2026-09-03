@@ -111,8 +111,9 @@ class StripePaymentCompletionTest extends TestCase
         $this->actingAs($user)->get(route('checkout.success', $order))
             ->assertOk()
             ->assertSee('View Receipt')
-            ->assertSee('data-success-seconds="5"', false)
-            ->assertSee('data-success-redirect', false)
+            ->assertDontSee('Redirecting in')
+            ->assertDontSee('data-success-seconds', false)
+            ->assertDontSee('data-success-redirect', false)
             ->assertSee(route('purchase-history.invoice', $invoice), false);
         $this->actingAs($user)->get(route('purchase-history.invoice', $invoice))
             ->assertRedirect('https://invoice.stripe.com/i/'.$sessionId);
