@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="success-section">
-    <div class="success-card payment-waiting-card"
+    <div class="success-card success-card-compact payment-waiting-card"
          data-paypal-waiting
          data-invoice-url="{{ $invoiceUrl }}"
          data-status-url="{{ route('payments.paypal.status', $order) }}"
@@ -16,13 +16,31 @@
             <p class="form-error" role="alert">{{ session('payment_cancel_error') }}</p>
         @endif
         <p class="payment-waiting-status" role="status" aria-live="polite">Opening PayPal and waiting for verified payment confirmation…</p>
-        <div class="success-actions">
-            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment">Reopen PayPal Payment</a>
+        <div class="success-actions payment-waiting-actions">
+            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment">Reopen PayPal</a>
             <a data-paypal-cancel class="success-action-button" href="{{ route('payments.cancel', ['provider' => 'paypal', 'order' => $order]) }}">Cancel Payment</a>
             <a class="success-action-button" href="{{ route('purchase-history') }}">Purchase History</a>
         </div>
     </div>
 </section>
+
+<style>
+.payment-waiting-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+}
+.payment-waiting-actions .success-action-button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+@media (max-width: 640px) {
+    .payment-waiting-actions {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 <script>
 (() => {
@@ -61,7 +79,7 @@
     const openPaymentWindow = () => {
         const opened = window.open(invoiceUrl, providerWindowName, windowFeatures);
         if (!opened) {
-            status.textContent = 'Your browser blocked the PayPal payment window. Select Reopen PayPal Payment to continue.';
+            status.textContent = 'Your browser blocked the PayPal payment window. Select Reopen PayPal to continue.';
             return null;
         }
 
