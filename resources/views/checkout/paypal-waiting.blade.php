@@ -11,13 +11,13 @@
          data-paypal-window-name="ainchors-paypal-payment">
         <span class="eyebrow">Secure PayPal payment</span>
         <h1>Complete payment with PayPal</h1>
-        <p>Keep this AINCHORS page open while you pay in the PayPal window. AINCHORS will continue only after the server verifies PayPal's signed payment confirmation.</p>
+        <p>PayPal will open automatically in the payment window. Keep this AINCHORS page open while you pay; AINCHORS will continue only after the server verifies the payment directly with PayPal.</p>
         @if (session('payment_cancel_error'))
             <p class="form-error" role="alert">{{ session('payment_cancel_error') }}</p>
         @endif
-        <p class="payment-waiting-status" role="status" aria-live="polite">Waiting for verified PayPal payment confirmation…</p>
+        <p class="payment-waiting-status" role="status" aria-live="polite">Opening PayPal and waiting for verified payment confirmation…</p>
         <div class="success-actions">
-            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment">Open PayPal Payment</a>
+            <a data-paypal-open class="success-action-button" href="{{ $invoiceUrl }}" target="ainchors-paypal-payment">Reopen PayPal Payment</a>
             <a data-paypal-cancel class="success-action-button" href="{{ route('payments.cancel', ['provider' => 'paypal', 'order' => $order]) }}">Cancel Payment</a>
             <a class="success-action-button" href="{{ route('purchase-history') }}">Purchase History</a>
         </div>
@@ -61,7 +61,7 @@
     const openPaymentWindow = () => {
         const opened = window.open(invoiceUrl, providerWindowName, windowFeatures);
         if (!opened) {
-            status.textContent = 'Your browser blocked the PayPal payment window. Select Open PayPal Payment to continue.';
+            status.textContent = 'Your browser blocked the PayPal payment window. Select Reopen PayPal Payment to continue.';
             return null;
         }
 
