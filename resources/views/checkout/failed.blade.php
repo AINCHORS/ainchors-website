@@ -7,7 +7,7 @@
 
 @section('content')
 <section class="success-section">
-    <div class="success-card">
+    <div class="success-card payment-state-card">
         <div class="success-icon is-unsuccessful" aria-hidden="true">×</div>
         <span class="eyebrow">{{ $state === 'cancelled' ? 'Payment cancelled' : 'Payment failed' }}</span>
         <h1>{{ $pageTitle }}</h1>
@@ -24,12 +24,12 @@
             <strong>{{ $order->order_number }}</strong>
         </div>
 
-        <div class="success-actions">
-            <a class="primary-button" href="{{ route('checkout.show', $product) }}">Try Again</a>
+        <div class="success-actions payment-state-actions">
+            <a class="payment-state-button" href="{{ route('checkout.show', $product) }}">Try Again</a>
             @if ($product->isCourse() || $product->isPackage())
-                <a class="secondary-button" href="{{ route('my-courses') }}">My Courses</a>
+                <a class="payment-state-button" href="{{ route('my-courses') }}">My Courses</a>
             @endif
-            <a class="secondary-button" href="{{ route('purchase-history') }}">Purchase History</a>
+            <a class="payment-state-button" href="{{ route('purchase-history') }}">Purchase History</a>
         </div>
     </div>
 </section>
