@@ -17,7 +17,31 @@
         @endif
         @error('payment')<p class="form-error" role="alert">{{ $message }}</p>@enderror
 
-        <form method="POST" action="{{ route('checkout.store', $product) }}" class="checkout-grid" x-data="{ submitting: false, provider: @js($availableProviders[0] ?? '') }" @submit="submitting = true">
+        <form method="POST" action="{{ route('checkout.store', $product) }}" class="checkout-grid"
+              x-data="{
+                  submitting: false,
+                  provider: @js($availableProviders[0] ?? ''),
+                  prepareHostedPayment() {
+                      this.submitting = true;
+                      if (this.provider !== 'paypal') return;
+
+                      const paymentWindow = window.open(
+                          '',
+                          'ainchors-paypal-payment',
+                          'popup=yes,width=560,height=760,resizable=yes,scrollbars=yes'
+                      );
+
+                      if (!paymentWindow) return;
+
+                      try {
+                          paymentWindow.document.title = 'PayPal Payment';
+                          paymentWindow.document.body.textContent = 'Preparing secure PayPal payment…';
+                      } catch (_) {
+                          // The PayPal waiting page will reuse this named window.
+                      }
+                  },
+              }"
+              @submit="prepareHostedPayment()">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $token }}">
 

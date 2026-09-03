@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\Commerce\CheckoutService;
 use App\Services\Commerce\ExternalInvoiceService;
+use App\Services\Commerce\Gateways\PayPalGateway;
 use App\Services\Commerce\HostedPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,7 @@ class HostedPaymentController extends Controller
         private readonly HostedPaymentService $hostedPayments,
         private readonly CheckoutService $checkout,
         private readonly ExternalInvoiceService $externalInvoices,
+        private readonly PayPalGateway $paypal,
     ) {}
 
     public function stripeReturn(Request $request, Order $order): RedirectResponse
@@ -46,7 +48,29 @@ class HostedPaymentController extends Controller
     {
         $this->assertOwned($request, $order);
         abort_unless(in_array($provider, ['stripe', 'paypal'], true), 404);
-        $product = $order->items()->firstOrFail()->product;
+        $order->loadMissing(['items.product', 'payments', 'externalInvoices']);
+        $product = $order->items->firstOrFail()->product;
+
+        if ($provider === 'paypal' && $order->status !== 'completed') {
+            $invoice = $order->externalInvoices
+                ->where('provider', 'paypal')
+                ->where('status', 'unpaid')
+                ->sortByDesc('issued_at')
+                ->first();
+
+            if ($invoice) {
+                try {
+                    $this->paypal->cancelInvoice($invoice->external_reference);
+                } catch (RuntimeException $exception) {
+                    report($exception);
+
+                    return redirect()->route('payments.paypal.waiting', $order)
+                        ->with('payment_cancel_error', 'PayPal could not cancel this payment yet. If you already paid, keep this page open while AINCHORS verifies the payment.');
+                }
+
+                $invoice->update(['status' => 'void']);
+            }
+        }
 
         $this->checkout->cancelPendingPayment($order, $provider);
         $request->session()->forget('checkout_tokens.'.$product->id);
@@ -68,16 +92,23 @@ class HostedPaymentController extends Controller
         }
 
         $context = (array) $request->session()->get('payment_failure_context', []);
+        $latestPayment = $order->payments->sortByDesc('id')->first();
+        $state = $order->status === 'cancelled'
+            ? 'cancelled'
+            : (in_array(($context['state'] ?? null), ['cancelled', 'failed'], true)
+                ? $context['state']
+                : 'failed');
+        $provider = in_array(($context['provider'] ?? null), ['stripe', 'paypal'], true)
+            ? $context['provider']
+            : ($state === 'cancelled' && in_array($latestPayment?->provider, ['stripe', 'paypal'], true)
+                ? $latestPayment->provider
+                : null);
 
         return view('checkout.failed', [
             'order' => $order,
             'item' => $order->items->firstOrFail(),
-            'state' => in_array(($context['state'] ?? null), ['cancelled', 'failed'], true)
-                ? $context['state']
-                : 'failed',
-            'provider' => in_array(($context['provider'] ?? null), ['stripe', 'paypal'], true)
-                ? $context['provider']
-                : null,
+            'state' => $state,
+            'provider' => $provider,
         ]);
     }
 
@@ -88,6 +119,10 @@ class HostedPaymentController extends Controller
 
         if ($this->paypalPaymentIsComplete($order)) {
             return redirect()->route('checkout.success', $order);
+        }
+
+        if ($order->status === 'cancelled') {
+            return redirect()->route('checkout.failed', $order);
         }
 
         $invoice = $order->externalInvoices
@@ -113,7 +148,14 @@ class HostedPaymentController extends Controller
             ]);
         }
 
-        if (in_array($order->status, ['cancelled', 'failed'], true)) {
+        if ($order->status === 'cancelled') {
+            return response()->json([
+                'state' => 'cancelled',
+                'redirect_url' => route('checkout.failed', $order),
+            ]);
+        }
+
+        if ($order->status === 'failed') {
             return response()->json([
                 'state' => 'failed',
                 'redirect_url' => route('checkout.failed', $order),

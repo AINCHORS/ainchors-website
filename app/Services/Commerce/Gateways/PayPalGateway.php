@@ -110,6 +110,41 @@ class PayPalGateway
         return $payload;
     }
 
+    public function cancelInvoice(string $invoiceId): void
+    {
+        $invoice = $this->retrieveInvoice($invoiceId);
+        $status = strtoupper((string) ($invoice['status'] ?? ''));
+
+        if (in_array($status, ['CANCELLED', 'AUTO_CANCELLED'], true)) {
+            return;
+        }
+
+        if (! in_array($status, ['UNPAID', 'SENT'], true)) {
+            throw new RuntimeException('This PayPal invoice can no longer be cancelled.');
+        }
+
+        try {
+            $response = $this->client()->post(
+                $this->apiUrl('/v2/invoicing/invoices/'.rawurlencode($invoiceId).'/cancel'),
+                [
+                    'send_to_invoicer' => false,
+                    'send_to_recipient' => false,
+                ],
+            );
+        } catch (Throwable $exception) {
+            throw new RuntimeException('PayPal could not cancel the provider invoice. Please try again.', previous: $exception);
+        }
+
+        if (! $response->successful()) {
+            throw new RuntimeException('PayPal could not cancel the provider invoice. Please try again.');
+        }
+
+        $confirmed = $this->retrieveInvoice($invoiceId);
+        if (! in_array(strtoupper((string) ($confirmed['status'] ?? '')), ['CANCELLED', 'AUTO_CANCELLED'], true)) {
+            throw new RuntimeException('PayPal did not confirm that the provider invoice was cancelled.');
+        }
+    }
+
     /** @param array<string, string|null> $headers */
     public function webhookIsVerified(array $headers, array|\stdClass $event): bool
     {
