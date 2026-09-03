@@ -121,7 +121,7 @@ class HostedPaymentController extends Controller
             return redirect()->route('checkout.success', $order);
         }
 
-        if ($order->status === 'cancelled') {
+        if ($order->status === 'cancelled' || $this->paypalPaymentIsFailed($order)) {
             return redirect()->route('checkout.failed', $order);
         }
 
@@ -155,7 +155,7 @@ class HostedPaymentController extends Controller
             ]);
         }
 
-        if ($order->status === 'failed') {
+        if ($this->paypalPaymentIsFailed($order)) {
             return response()->json([
                 'state' => 'failed',
                 'redirect_url' => route('checkout.failed', $order),
@@ -169,6 +169,13 @@ class HostedPaymentController extends Controller
             return response()->json([
                 'state' => 'completed',
                 'redirect_url' => route('checkout.success', $order),
+            ]);
+        }
+
+        if ($this->paypalPaymentIsFailed($order)) {
+            return response()->json([
+                'state' => 'failed',
+                'redirect_url' => route('checkout.failed', $order),
             ]);
         }
 
@@ -206,6 +213,14 @@ class HostedPaymentController extends Controller
             && $order->payments->contains(fn ($payment): bool =>
                 $payment->provider === 'paypal' && $payment->status === 'paid'
             );
+    }
+
+    private function paypalPaymentIsFailed(Order $order): bool
+    {
+        return $order->payments
+            ->where('provider', 'paypal')
+            ->sortByDesc('id')
+            ->first()?->status === 'failed';
     }
 
     private function assertOwned(Request $request, Order $order): void
