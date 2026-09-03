@@ -147,6 +147,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::delete('/products/{product}/package-courses/{course}', [AdminPackageMembershipController::class, 'destroy'])->name('package-members.destroy');
 
     Route::get('/course-content', [AdminCourseContentController::class, 'index'])->name('course-content.index');
+    Route::get('/course-content/create', [AdminCourseContentController::class, 'create'])->name('course-content.create');
     Route::post('/course-content', [AdminCourseContentController::class, 'store'])->name('course-content.store');
     Route::get('/course-content/{courseContent}/edit', [AdminCourseContentController::class, 'edit'])->name('course-content.edit');
     Route::get('/course-content/{courseContent}/video-preview', [AdminCourseContentController::class, 'videoPreview'])->name('course-content.video-preview');
