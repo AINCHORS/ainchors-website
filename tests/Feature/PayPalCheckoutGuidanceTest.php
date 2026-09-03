@@ -46,7 +46,7 @@ class PayPalCheckoutGuidanceTest extends TestCase
 
         $this->assertStringContainsString('href="'.route('payments.paypal.handoff').'"', $html);
         $this->assertStringContainsString('target="ainchors-paypal-payment"', $html);
-        $this->assertStringContainsString('$refs.checkoutForm.requestSubmit($refs.checkoutSubmit)', $html);
+        $this->assertStringContainsString('this.$refs.checkoutForm.requestSubmit(this.$refs.checkoutSubmit)', $html);
         $this->assertStringContainsString('Continue with PayPal', $html);
         $this->assertStringNotContainsString('window.open(', $html);
         $this->assertStringNotContainsString('popup=yes', $html);
