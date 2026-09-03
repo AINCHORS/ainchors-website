@@ -39,6 +39,16 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertStringContainsString('.payment-state-actions { grid-template-columns: 1fr; }', $paymentCss);
     }
 
+    public function test_payment_state_content_uses_the_card_height_instead_of_staying_clustered_in_the_middle(): void
+    {
+        $stateStyles = file_get_contents(resource_path('views/checkout/partials/payment-state-styles.blade.php'));
+
+        $this->assertIsString($stateStyles);
+        $this->assertStringContainsString('.payment-state-card { width: min(100%, 620px); min-height: 700px; justify-content: flex-start;', $stateStyles);
+        $this->assertStringContainsString('padding-top: 64px; padding-bottom: 52px;', $stateStyles);
+        $this->assertStringContainsString('.payment-state-actions { margin-top: auto;', $stateStyles);
+    }
+
     public function test_terminal_payment_titles_stay_on_one_line_and_inside_the_card_without_forcing_the_waiting_title(): void
     {
         $success = file_get_contents(resource_path('views/checkout/success.blade.php'));
