@@ -6,6 +6,7 @@ use App\Models\AdminAuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 class AdminUserPasswordResetTest extends TestCase
@@ -116,6 +117,28 @@ class AdminUserPasswordResetTest extends TestCase
 
         $this->assertFalse($user->must_change_password);
         $this->assertTrue(Hash::check('MyOwnPassword123!', $user->password));
+    }
+
+    public function test_normal_email_password_reset_clears_pending_admin_reset_requirement(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'user',
+            'status' => 'active',
+            'must_change_password' => true,
+        ]);
+        $token = Password::broker()->createToken($user);
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'EmailResetPassword123!',
+            'password_confirmation' => 'EmailResetPassword123!',
+        ])->assertRedirect(route('login'));
+
+        $user->refresh();
+
+        $this->assertFalse($user->must_change_password);
+        $this->assertTrue(Hash::check('EmailResetPassword123!', $user->password));
     }
 
     private function admin(): User
