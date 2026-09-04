@@ -12,6 +12,7 @@
         <span class="eyebrow">{{ $state === 'cancelled' ? 'Payment cancelled' : 'Payment failed' }}</span>
         <h1 class="payment-result-title">{{ $pageTitle }}</h1>
         <h2>{{ $item->product_name }}</h2>
+        <p class="payment-state-highlight">{{ $state === 'cancelled' ? 'NOT CHARGED' : 'PAYMENT NOT CONFIRMED' }}</p>
 
         @if ($state === 'cancelled')
             <p>Your {{ $provider ? str($provider)->headline().' ' : '' }}payment was cancelled. You have not been charged.</p>
