@@ -115,7 +115,7 @@ class HostedPaymentController extends Controller
     public function paypalWaiting(Request $request, Order $order): View|RedirectResponse
     {
         $this->assertOwned($request, $order);
-        $order->loadMissing(['payments', 'externalInvoices']);
+        $order->loadMissing(['payments', 'externalInvoices', 'items.product']);
 
         if ($this->paypalPaymentIsComplete($order)) {
             return redirect()->route('checkout.success', $order);
