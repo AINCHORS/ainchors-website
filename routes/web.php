@@ -97,7 +97,7 @@ Route::get('/courses', [CourseCatalogController::class, 'index'])->name('courses
 Route::get('/courses/{course:slug}', [CourseCatalogController::class, 'show'])->name('courses.show');
 Route::get('/course-packages/{package:slug}', [CourseCatalogController::class, 'package'])->name('packages.show');
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::get('/join-us/apply', [JobApplicationController::class, 'create'])->name('job-applications.create');
     Route::post('/join-us/apply', [JobApplicationController::class, 'store'])->name('job-applications.store');
     Route::get('/join-us/application-success', [JobApplicationController::class, 'success'])->name('job-applications.success');
@@ -133,6 +133,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->as('admin.')->group(funct
     Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
     Route::match(['put', 'patch'], '/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
     Route::patch('/users/{user}/status', [AdminUserController::class, 'updateStatus'])->name('users.status');
+    Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.password.reset');
 
     Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
