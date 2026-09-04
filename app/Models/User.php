@@ -16,7 +16,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'role', 'full_name', 'first_name', 'last_name', 'date_of_birth',
-        'email', 'password', 'phone', 'country', 'address_line_1', 'address_line_2',
+        'email', 'password', 'must_change_password', 'phone', 'country', 'address_line_1', 'address_line_2',
         'city', 'state', 'postal_code',
         'profile_picture', 'status', 'email_verified_at', 'last_login_at',
     ];
@@ -29,6 +29,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
             'date_of_birth' => 'date',
         ];
     }
