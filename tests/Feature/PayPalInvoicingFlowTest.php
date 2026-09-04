@@ -68,8 +68,9 @@ class PayPalInvoicingFlowTest extends TestCase
         ]);
         $order = Order::query()->latest('id')->firstOrFail();
         $invoice['detail']['reference'] = $order->order_number;
-        $waitingUrl = url('/payments/paypal/'.$order->order_number.'/waiting');
-        $first->assertRedirect($waitingUrl);
+        $invoiceUrl = 'https://www.sandbox.paypal.com/invoice/p/#'.$invoiceId;
+        $waitingUrl = route('payments.paypal.waiting', $order);
+        $first->assertRedirect($invoiceUrl);
 
         $payment = $order->payments()->where('provider', 'paypal')->firstOrFail();
         $this->assertSame($invoiceId, data_get($payment->provider_data, 'paypal_invoice_id'));
@@ -83,13 +84,13 @@ class PayPalInvoicingFlowTest extends TestCase
         $this->actingAs($user)->post(route('checkout.store', $product), [
             'checkout_token' => $token,
             'payment_provider' => 'paypal',
-        ])->assertRedirect($waitingUrl);
+        ])->assertRedirect($invoiceUrl);
 
         $this->actingAs($user)->get($waitingUrl)
             ->assertOk()
-            ->assertSee('Complete payment with PayPal')
-            ->assertSee('https://www.sandbox.paypal.com/invoice/p/#'.$invoiceId, false);
-        $this->actingAs($user)->get($waitingUrl.'/status')
+            ->assertSee('Awaiting Payment')
+            ->assertSee($invoiceUrl, false);
+        $this->actingAs($user)->get(route('payments.paypal.status', $order))
             ->assertOk()
             ->assertJson(['state' => 'pending']);
 
@@ -272,7 +273,7 @@ class PayPalInvoicingFlowTest extends TestCase
             'payment_provider' => 'paypal',
         ]);
         $order = Order::query()->firstOrFail();
-        $response->assertRedirect(url('/payments/paypal/'.$order->order_number.'/waiting'));
+        $response->assertRedirect('https://www.sandbox.paypal.com/invoice/p/#'.$invoiceId);
 
         $invoice['status'] = 'PAID';
         $invoice['detail']['reference'] = $order->order_number;
@@ -421,8 +422,7 @@ class PayPalInvoicingFlowTest extends TestCase
             'checkout_token' => $token,
             'payment_provider' => 'paypal',
         ]);
-        $order = Order::query()->firstOrFail();
-        $response->assertRedirect(url('/payments/paypal/'.$order->order_number.'/waiting'));
+        $response->assertRedirect('https://www.sandbox.paypal.com/invoice/p/#'.$invoiceId);
 
         $creates = collect(Http::recorded())->filter(fn (array $record): bool =>
             $record[0]->method() === 'POST' && str_ends_with($record[0]->url(), '/v2/invoicing/invoices')
