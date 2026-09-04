@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Rules\PhoneForCountry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
@@ -85,7 +86,11 @@ class ProfileController extends Controller
             'current_password.current_password' => 'Your current password is incorrect.',
         ]);
 
-        $request->user()->update(['password' => $validated['password']]);
+        $request->user()->forceFill([
+            'password' => $validated['password'],
+            'remember_token' => Str::random(60),
+            'must_change_password' => false,
+        ])->save();
 
         return back()->with('password_success', 'Your password has been updated.');
     }
