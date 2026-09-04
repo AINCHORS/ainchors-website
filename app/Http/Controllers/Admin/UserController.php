@@ -9,7 +9,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -181,6 +183,43 @@ class UserController extends Controller
             ->with('success', 'User status updated.');
     }
 
+    public function resetPassword(Request $request, User $user): RedirectResponse
+    {
+        if ($user->isAdmin()) {
+            throw ValidationException::withMessages([
+                'password' => 'Administrator passwords cannot be reset from user management.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
+
+        /** @var User $admin */
+        $admin = $request->user();
+
+        DB::transaction(function () use ($admin, $user, $data): void {
+            $before = ['must_change_password' => (bool) $user->must_change_password];
+
+            $user->forceFill([
+                'password' => $data['password'],
+                'remember_token' => Str::random(60),
+                'must_change_password' => true,
+            ])->save();
+
+            $this->audit->record(
+                $admin,
+                'USER_PASSWORD_RESET_BY_ADMIN',
+                $user,
+                $before,
+                ['must_change_password' => true],
+            );
+        });
+
+        return redirect()->route('admin.users.show', $user)
+            ->with('success', 'Temporary password set. The user must change it after signing in.');
+    }
+
     private function assertAdminIdentityChangeIsSafe(User $user, string $newEmail): void
     {
         if (! $user->isAdmin()) {
@@ -240,7 +279,7 @@ class UserController extends Controller
     {
         return User::query()->select([
             'id', 'full_name', 'email', 'role', 'status', 'created_at',
-            'email_verified_at', 'last_login_at',
+            'email_verified_at', 'last_login_at', 'must_change_password',
         ]);
     }
 }
