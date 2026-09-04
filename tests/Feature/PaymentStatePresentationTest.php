@@ -49,7 +49,42 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertStringNotContainsString('.payment-state-actions { margin-top: auto;', $stateStyles);
     }
 
-    public function test_terminal_payment_titles_stay_on_one_line_and_inside_the_card_without_forcing_the_waiting_title(): void
+    public function test_all_payment_states_follow_the_successful_visual_hierarchy(): void
+    {
+        $success = file_get_contents(resource_path('views/checkout/success.blade.php'));
+        $failed = file_get_contents(resource_path('views/checkout/failed.blade.php'));
+        $waiting = file_get_contents(resource_path('views/checkout/paypal-waiting.blade.php'));
+        $controller = file_get_contents(app_path('Http/Controllers/Commerce/HostedPaymentController.php'));
+        $stateStyles = file_get_contents(resource_path('views/checkout/partials/payment-state-styles.blade.php'));
+
+        $this->assertIsString($success);
+        $this->assertIsString($failed);
+        $this->assertIsString($waiting);
+        $this->assertIsString($controller);
+        $this->assertIsString($stateStyles);
+
+        $this->assertStringContainsString('<span class="eyebrow">Payment complete</span>', $success);
+        $this->assertStringContainsString('<h1 class="payment-result-title">Payment Successful</h1>', $success);
+        $this->assertStringContainsString('class="success-price"', $success);
+
+        $this->assertStringContainsString("{{ \$state === 'cancelled' ? 'NOT CHARGED' : 'PAYMENT NOT CONFIRMED' }}", $failed);
+        $this->assertStringContainsString('class="payment-state-highlight"', $failed);
+
+        $this->assertStringContainsString('success-icon is-pending', $waiting);
+        $this->assertStringContainsString('<span class="eyebrow">Payment pending</span>', $waiting);
+        $this->assertStringContainsString('<h1 class="payment-result-title">Awaiting Payment</h1>', $waiting);
+        $this->assertStringContainsString('<h2>{{ $item->product_name }}</h2>', $waiting);
+        $this->assertStringContainsString('<p class="payment-state-highlight">PAYPAL</p>', $waiting);
+        $this->assertStringContainsString('<span>Order Reference</span>', $waiting);
+        $this->assertStringNotContainsString('Complete payment with PayPal', $waiting);
+        $this->assertStringNotContainsString('Secure PayPal payment', $waiting);
+
+        $this->assertStringContainsString("['payments', 'externalInvoices', 'items.product']", $controller);
+        $this->assertStringContainsString('.payment-state-highlight {', $stateStyles);
+        $this->assertStringContainsString('.success-icon.is-pending {', $stateStyles);
+    }
+
+    public function test_payment_state_titles_stay_on_one_line_and_inside_the_card(): void
     {
         $success = file_get_contents(resource_path('views/checkout/success.blade.php'));
         $failed = file_get_contents(resource_path('views/checkout/failed.blade.php'));
@@ -62,7 +97,7 @@ class PaymentStatePresentationTest extends TestCase
         $this->assertIsString($stateStyles);
         $this->assertStringContainsString('<h1 class="payment-result-title">Payment Successful</h1>', $success);
         $this->assertStringContainsString('<h1 class="payment-result-title">{{ $pageTitle }}</h1>', $failed);
-        $this->assertStringNotContainsString('payment-result-title', $waiting);
+        $this->assertStringContainsString('<h1 class="payment-result-title">Awaiting Payment</h1>', $waiting);
         $this->assertStringContainsString('.payment-result-title { font-size: clamp(22px,7vw,40px); max-width: 100%; white-space: nowrap;', $stateStyles);
     }
 
