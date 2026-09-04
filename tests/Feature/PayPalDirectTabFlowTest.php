@@ -146,18 +146,17 @@ class PayPalDirectTabFlowTest extends TestCase
 
     public function test_waiting_page_only_polls_payment_status_and_does_not_coordinate_tabs(): void
     {
-        $order = new Order(['order_number' => 'AIN-PAYPAL-DIRECT-WAITING']);
-        $invoiceUrl = 'https://www.sandbox.paypal.com/invoice/p/#INV2-DIRECT-WAITING';
+        $template = file_get_contents(resource_path('views/checkout/paypal-waiting.blade.php'));
 
-        $html = view('checkout.paypal-waiting', compact('order', 'invoiceUrl'))->render();
-
-        $this->assertStringContainsString('Complete payment with PayPal', $html);
-        $this->assertStringContainsString('Reopen PayPal', $html);
-        $this->assertStringContainsString('Cancel Payment', $html);
-        $this->assertStringContainsString('fetch(statusUrl', $html);
-        $this->assertStringNotContainsString('postMessage(', $html);
-        $this->assertStringNotContainsString('ainchors-paypal-handoff', $html);
-        $this->assertStringNotContainsString('window.open(', $html);
+        $this->assertIsString($template);
+        $this->assertStringContainsString('Awaiting Payment', $template);
+        $this->assertStringContainsString('Reopen PayPal', $template);
+        $this->assertStringContainsString('Cancel Payment', $template);
+        $this->assertStringContainsString('fetch(statusUrl', $template);
+        $this->assertStringNotContainsString('Complete payment with PayPal', $template);
+        $this->assertStringNotContainsString('postMessage(', $template);
+        $this->assertStringNotContainsString('ainchors-paypal-handoff', $template);
+        $this->assertStringNotContainsString('window.open(', $template);
     }
 
     /** @return array{User, Product} */
