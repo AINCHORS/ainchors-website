@@ -29,7 +29,7 @@ class PaymentStatePresentationTest extends TestCase
 
         $this->assertIsString($css);
         $this->assertIsString($stateStyles);
-        $this->assertStringContainsString('.payment-state-card { width: min(100%, 620px); min-height: 700px;', $paymentCss);
+        $this->assertStringContainsString('.payment-state-card { width: min(100%, 580px); min-height: 640px;', $paymentCss);
         $this->assertStringContainsString('.payment-state-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr));', $paymentCss);
         $this->assertStringContainsString('.payment-state-button {', $paymentCss);
         $this->assertStringContainsString('background: #37ad82;', $paymentCss);
@@ -44,8 +44,8 @@ class PaymentStatePresentationTest extends TestCase
         $stateStyles = file_get_contents(resource_path('views/checkout/partials/payment-state-styles.blade.php'));
 
         $this->assertIsString($stateStyles);
-        $this->assertStringContainsString('.payment-state-card { width: min(100%, 620px); min-height: 700px; justify-content: flex-start; padding-top: 48px; padding-bottom: 48px;', $stateStyles);
-        $this->assertStringContainsString('.payment-state-actions { margin-top: 30px;', $stateStyles);
+        $this->assertStringContainsString('.payment-state-card { width: min(100%, 580px); min-height: 640px; justify-content: flex-start; padding-top: 46px; padding-bottom: 46px;', $stateStyles);
+        $this->assertStringContainsString('.payment-state-actions { margin-top: 28px;', $stateStyles);
         $this->assertStringNotContainsString('.payment-state-actions { margin-top: auto;', $stateStyles);
     }
 
