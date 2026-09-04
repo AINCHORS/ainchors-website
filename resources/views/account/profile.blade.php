@@ -11,6 +11,13 @@
             <p class="mt-3 font-sans text-ainchors-body text-ainchors-grey-dark">Manage the details stored for your AINCHORS account.</p>
         </div>
 
+        @if ($user->must_change_password)
+            <div role="alert" class="mb-8 rounded-ainchors-card border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-sm">
+                <p class="font-semibold">Password change required</p>
+                <p class="mt-1 leading-relaxed">An administrator reset your password. Please use the temporary password as your current password below, then choose your own new password before continuing.</p>
+            </div>
+        @endif
+
         <nav aria-label="Account navigation" class="mb-8 flex flex-wrap gap-2">
             <a href="{{ route('profile') }}" aria-current="page" class="rounded-ainchors-button bg-ainchors-green px-4 py-2 font-sans text-sm font-semibold text-ainchors-white">My Profile</a>
             <a href="{{ route('my-courses') }}" class="rounded-ainchors-button border border-ainchors-green/40 bg-ainchors-white px-4 py-2 font-sans text-sm font-semibold text-ainchors-green transition hover:bg-ainchors-green hover:text-ainchors-white">My Courses</a>
