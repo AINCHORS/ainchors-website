@@ -24,26 +24,32 @@ class PayPalWaitingExperienceTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_waiting_page_keeps_ainchors_tab_and_hands_the_invoice_to_the_existing_paypal_tab(): void
+    public function test_waiting_page_keeps_the_ainchors_tab_and_only_polls_verified_payment_status(): void
     {
-        $order = new Order(['order_number' => 'AIN-PAYPAL-WAITING-TEST']);
-        $invoiceUrl = 'https://www.sandbox.paypal.com/invoice/p/#INV2-WAITING-TEST';
+        $this->enablePayPal();
+        [$user, $order] = $this->pendingPayPalOrder('INV2-WAITING-TEST');
 
-        $html = view('checkout.paypal-waiting', compact('order', 'invoiceUrl'))->render();
+        $response = $this->actingAs($user)
+            ->get(route('payments.paypal.waiting', $order))
+            ->assertOk()
+            ->assertSee('Awaiting Payment');
 
+        $html = (string) $response->getContent();
         $this->assertStringContainsString('target="ainchors-paypal-payment"', $html);
         $this->assertStringContainsString('Reopen PayPal', $html);
         $this->assertStringContainsString('Cancel Payment', $html);
-        $this->assertStringContainsString("window.addEventListener('message'", $html);
-        $this->assertStringContainsString('ainchors-paypal-handoff-ready', $html);
-        $this->assertStringContainsString('ainchors-paypal-handoff-invoice', $html);
+        $this->assertStringContainsString('fetch(statusUrl', $html);
         $this->assertStringContainsString("window.addEventListener('pageshow'", $html);
         $this->assertStringContainsString(route('payments.cancel', ['provider' => 'paypal', 'order' => $order]), $html);
+        $this->assertStringNotContainsString("window.addEventListener('message'", $html);
+        $this->assertStringNotContainsString('ainchors-paypal-handoff-ready', $html);
+        $this->assertStringNotContainsString('ainchors-paypal-handoff-invoice', $html);
+        $this->assertStringNotContainsString('postMessage(', $html);
         $this->assertStringNotContainsString('window.open(', $html);
         $this->assertStringNotContainsString('window.location.assign(invoiceUrl)', $html);
     }
 
-    public function test_checkout_opens_a_regular_paypal_handoff_tab_from_the_click_gesture(): void
+    public function test_checkout_opens_a_regular_paypal_provider_tab_directly_from_the_submit_gesture(): void
     {
         $this->enablePayPal();
         $user = User::factory()->create([
@@ -69,12 +75,14 @@ class PayPalWaitingExperienceTest extends TestCase
             ->assertOk();
         $html = (string) $response->getContent();
 
-        $this->assertStringContainsString(route('payments.paypal.handoff'), $html);
-        $this->assertStringContainsString('target="ainchors-paypal-payment"', $html);
-        $this->assertStringContainsString('@click="prepareHostedPayment()"', $html);
-        $this->assertStringContainsString('this.$refs.checkoutForm.requestSubmit(this.$refs.checkoutSubmit)', $html);
+        $this->assertStringContainsString('formtarget="ainchors-paypal-payment"', $html);
+        $this->assertStringContainsString('data-paypal-waiting-target-url=', $html);
+        $this->assertStringContainsString('@submit="handleCheckoutSubmit()"', $html);
+        $this->assertStringContainsString('startPayPalWaitingTargetPolling()', $html);
+        $this->assertStringContainsString('Continue with PayPal', $html);
+        $this->assertStringNotContainsString('/payments/paypal/handoff', $html);
         $this->assertStringNotContainsString('window.open(', $html);
-        $this->assertStringNotContainsString('popup=yes', $html);
+        $this->assertStringNotContainsString('postMessage(', $html);
         $this->assertStringNotContainsString('Preparing secure PayPal payment…', $html);
     }
 
